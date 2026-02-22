@@ -1,0 +1,60 @@
+name: anime_shelf
+description: "Local-first anime ranking & tier-list management app."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State management
+  hooks_riverpod: ^2.6.1
+  flutter_hooks: ^0.20.5
+  riverpod_annotation: ^2.6.1
+
+  # Database
+  drift: ^2.22.1
+  drift_flutter: ^0.2.4
+  sqlite3_flutter_libs: ^0.5.28
+
+  # Networking
+  dio: ^5.7.0
+
+  # Image
+  cached_network_image: ^3.4.1
+
+  # Routing
+  go_router: ^14.8.1
+
+  # Utils
+  path_provider: ^2.1.5
+  path: ^1.9.1
+  share_plus: ^10.1.4
+  file_picker: ^8.1.7
+  shared_preferences: ^2.3.4
+  uuid: ^4.5.1
+
+  # Freezed runtime
+  freezed_annotation: ^2.4.4
+  json_annotation: ^4.9.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+  # Code generation
+  build_runner: ^2.4.14
+  riverpod_generator: ^2.6.3
+  freezed: ^2.5.7
+  json_serializable: ^6.9.4
+  drift_dev: ^2.22.1
+
+  # Testing
+  mocktail: ^1.0.4
+
+flutter:
+  uses-material-design: true

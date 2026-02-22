@@ -1,0 +1,305 @@
+import 'package:anime_shelf/core/database/app_database.dart';
+import 'package:anime_shelf/features/shelf/data/shelf_repository.dart';
+import 'package:drift/drift.dart';
+import 'package:drift/native.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  late AppDatabase db;
+  late ShelfRepository repo;
+
+  setUp(() async {
+    db = AppDatabase(NativeDatabase.memory());
+    repo = ShelfRepository(db);
+    // Wait for seed data to populate
+    await db.select(db.tiers).get(); // triggers migration/seed on first access
+  });
+
+  tearDown(() async {
+    await db.close();
+  });
+
+  group('Tier operations', () {
+    test('seed creates 4 default tiers', () async {
+      final tiers = await (db.select(
+        db.tiers,
+      )..orderBy([(t) => OrderingTerm.asc(t.tierSort)])).get();
+      expect(tiers.length, equals(4));
+      expect(tiers[0].name, equals('Inbox'));
+      expect(tiers[0].isInbox, isTrue);
+      expect(tiers[1].name, equals('S'));
+      expect(tiers[2].name, equals('A'));
+      expect(tiers[3].name, equals('B'));
+    });
+
+    test('addTier places new tier after the last one', () async {
+      final newTier = await repo.addTier(
+        name: 'C',
+        emoji: '',
+        colorValue: 0xFF00FF00,
+      );
+      expect(newTier.name, equals('C'));
+      expect(newTier.tierSort, greaterThan(3000.0));
+    });
+
+    test('updateTier changes name', () async {
+      final tiers = await db.select(db.tiers).get();
+      final tierS = tiers.firstWhere((t) => t.name == 'S');
+
+      await repo.updateTier(tierId: tierS.id, name: 'S+');
+      final updated = await (db.select(
+        db.tiers,
+      )..where((t) => t.id.equals(tierS.id))).getSingle();
+      expect(updated.name, equals('S+'));
+    });
+
+    test('updateTier changes color without affecting name', () async {
+      final tiers = await db.select(db.tiers).get();
+      final tierA = tiers.firstWhere((t) => t.name == 'A');
+
+      await repo.updateTier(tierId: tierA.id, colorValue: 0xFFFF0000);
+      final updated = await (db.select(
+        db.tiers,
+      )..where((t) => t.id.equals(tierA.id))).getSingle();
+      expect(updated.name, equals('A'));
+      expect(updated.colorValue, equals(0xFFFF0000));
+    });
+
+    test('reorderTier changes tierSort', () async {
+      final tiers = await (db.select(
+        db.tiers,
+      )..orderBy([(t) => OrderingTerm.asc(t.tierSort)])).get();
+      final tierB = tiers.firstWhere((t) => t.name == 'B');
+
+      await repo.reorderTier(tierId: tierB.id, newSort: 500.0);
+      final updated = await (db.select(
+        db.tiers,
+      )..where((t) => t.id.equals(tierB.id))).getSingle();
+      expect(updated.tierSort, equals(500.0));
+    });
+
+    test('recompressTierSorts evenly spaces tiers', () async {
+      // Mess up tier sorts to be very close
+      final tiers = await db.select(db.tiers).get();
+      for (final tier in tiers) {
+        await (db.update(db.tiers)..where((t) => t.id.equals(tier.id))).write(
+          TiersCompanion(tierSort: Value(tier.tierSort * 0.001)),
+        );
+      }
+
+      await repo.recompressTierSorts();
+
+      final recompressed = await (db.select(
+        db.tiers,
+      )..orderBy([(t) => OrderingTerm.asc(t.tierSort)])).get();
+      expect(recompressed[0].tierSort, equals(1000.0));
+      expect(recompressed[1].tierSort, equals(2000.0));
+      expect(recompressed[2].tierSort, equals(3000.0));
+      expect(recompressed[3].tierSort, equals(4000.0));
+    });
+
+    test('deleteTier moves entries to inbox', () async {
+      // Insert a subject first
+      await db
+          .into(db.subjects)
+          .insert(SubjectsCompanion.insert(subjectId: const Value(42)));
+
+      final tiers = await db.select(db.tiers).get();
+      final tierS = tiers.firstWhere((t) => t.name == 'S');
+      final inbox = tiers.firstWhere((t) => t.isInbox);
+
+      // Create entry in tier S
+      final entry = await repo.createEntry(subjectId: 42, tierId: tierS.id);
+      expect(entry.tierId, equals(tierS.id));
+
+      // Delete tier S
+      await repo.deleteTier(tierS.id);
+
+      // Entry should now be in inbox
+      final movedEntry = await (db.select(
+        db.entries,
+      )..where((e) => e.id.equals(entry.id))).getSingle();
+      expect(movedEntry.tierId, equals(inbox.id));
+
+      // Tier S should be gone
+      final remaining = await db.select(db.tiers).get();
+      expect(remaining.any((t) => t.name == 'S'), isFalse);
+    });
+  });
+
+  group('Entry operations', () {
+    late int tierId;
+
+    setUp(() async {
+      // Insert test subjects
+      await db
+          .into(db.subjects)
+          .insert(
+            SubjectsCompanion.insert(
+              subjectId: const Value(100),
+              nameCn: const Value('Test Subject'),
+            ),
+          );
+      await db
+          .into(db.subjects)
+          .insert(
+            SubjectsCompanion.insert(
+              subjectId: const Value(200),
+              nameCn: const Value('Another Subject'),
+            ),
+          );
+
+      final tiers = await db.select(db.tiers).get();
+      tierId = tiers.firstWhere((t) => t.name == 'S').id;
+    });
+
+    test('createEntry inserts entry and junction record', () async {
+      final entry = await repo.createEntry(subjectId: 100, tierId: tierId);
+      expect(entry.tierId, equals(tierId));
+      expect(entry.primarySubjectId, equals(100));
+      expect(entry.entryRank, equals(1000.0));
+
+      // Junction record should exist
+      final junctions = await db.select(db.entrySubjects).get();
+      expect(junctions.length, equals(1));
+      expect(junctions[0].entryId, equals(entry.id));
+      expect(junctions[0].subjectId, equals(100));
+    });
+
+    test('second entry gets rank after the first', () async {
+      final entry1 = await repo.createEntry(subjectId: 100, tierId: tierId);
+      final entry2 = await repo.createEntry(subjectId: 200, tierId: tierId);
+      expect(entry2.entryRank, greaterThan(entry1.entryRank));
+    });
+
+    test('moveEntry changes tier and rank', () async {
+      final tiers = await db.select(db.tiers).get();
+      final tierA = tiers.firstWhere((t) => t.name == 'A');
+      final entry = await repo.createEntry(subjectId: 100, tierId: tierId);
+
+      await repo.moveEntry(
+        entryId: entry.id,
+        targetTierId: tierA.id,
+        newRank: 500.0,
+      );
+
+      final updated = await (db.select(
+        db.entries,
+      )..where((e) => e.id.equals(entry.id))).getSingle();
+      expect(updated.tierId, equals(tierA.id));
+      expect(updated.entryRank, equals(500.0));
+    });
+
+    test('deleteEntry removes entry and junction records', () async {
+      final entry = await repo.createEntry(subjectId: 100, tierId: tierId);
+
+      await repo.deleteEntry(entry.id);
+
+      final entries = await db.select(db.entries).get();
+      expect(entries.where((e) => e.id == entry.id), isEmpty);
+
+      final junctions = await db.select(db.entrySubjects).get();
+      expect(junctions.where((j) => j.entryId == entry.id), isEmpty);
+    });
+
+    test('updateNote sets note text', () async {
+      final entry = await repo.createEntry(subjectId: 100, tierId: tierId);
+      expect(entry.note, isEmpty);
+
+      await repo.updateNote(entryId: entry.id, note: 'Great anime!');
+
+      final updated = await (db.select(
+        db.entries,
+      )..where((e) => e.id.equals(entry.id))).getSingle();
+      expect(updated.note, equals('Great anime!'));
+    });
+
+    test('subjectExists returns true for existing entry', () async {
+      await repo.createEntry(subjectId: 100, tierId: tierId);
+      expect(await repo.subjectExists(100), isTrue);
+    });
+
+    test('subjectExists returns false for non-existing entry', () async {
+      expect(await repo.subjectExists(999), isFalse);
+    });
+
+    test('recompressEntryRanks evenly spaces entries', () async {
+      // Create 3 entries with close ranks
+      final e1 = await repo.createEntry(subjectId: 100, tierId: tierId);
+      await repo.moveEntry(
+        entryId: e1.id,
+        targetTierId: tierId,
+        newRank: 0.001,
+      );
+
+      await db
+          .into(db.subjects)
+          .insert(
+            SubjectsCompanion.insert(
+              subjectId: const Value(300),
+              nameCn: const Value('Third'),
+            ),
+          );
+      final e2 = await repo.createEntry(subjectId: 200, tierId: tierId);
+      await repo.moveEntry(
+        entryId: e2.id,
+        targetTierId: tierId,
+        newRank: 0.002,
+      );
+      final e3 = await repo.createEntry(subjectId: 300, tierId: tierId);
+      await repo.moveEntry(
+        entryId: e3.id,
+        targetTierId: tierId,
+        newRank: 0.003,
+      );
+
+      await repo.recompressEntryRanks(tierId);
+
+      final entries =
+          await (db.select(db.entries)
+                ..where((e) => e.tierId.equals(tierId))
+                ..orderBy([(e) => OrderingTerm.asc(e.entryRank)]))
+              .get();
+      expect(entries.length, equals(3));
+      expect(entries[0].entryRank, equals(1000.0));
+      expect(entries[1].entryRank, equals(2000.0));
+      expect(entries[2].entryRank, equals(3000.0));
+    });
+  });
+
+  group('watchTiersWithEntries', () {
+    test('emits tiers with entries ordered correctly', () async {
+      // Insert subject
+      await db
+          .into(db.subjects)
+          .insert(
+            SubjectsCompanion.insert(
+              subjectId: const Value(100),
+              nameCn: const Value('Anime A'),
+            ),
+          );
+
+      final tiers = await db.select(db.tiers).get();
+      final tierS = tiers.firstWhere((t) => t.name == 'S');
+
+      await repo.createEntry(subjectId: 100, tierId: tierS.id);
+
+      final result = await repo.watchTiersWithEntries().first;
+      expect(result.length, equals(4)); // 4 seed tiers
+
+      final sTier = result.firstWhere((t) => t.tier.name == 'S');
+      expect(sTier.entries.length, equals(1));
+      expect(sTier.entries[0].subject?.nameCn, equals('Anime A'));
+    });
+
+    test('tiers are ordered by tierSort', () async {
+      final result = await repo.watchTiersWithEntries().first;
+      for (var i = 1; i < result.length; i++) {
+        expect(
+          result[i].tier.tierSort,
+          greaterThan(result[i - 1].tier.tierSort),
+        );
+      }
+    });
+  });
+}

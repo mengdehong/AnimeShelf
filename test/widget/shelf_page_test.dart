@@ -1,0 +1,301 @@
+import 'package:anime_shelf/core/database/app_database.dart';
+import 'package:anime_shelf/core/providers.dart';
+import 'package:anime_shelf/features/shelf/data/shelf_repository.dart';
+import 'package:anime_shelf/features/shelf/ui/entry_card.dart';
+import 'package:anime_shelf/features/shelf/ui/shelf_page.dart';
+import 'package:drift/native.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+
+/// Creates an in-memory [AppDatabase] for testing.
+AppDatabase _createTestDb() => AppDatabase(NativeDatabase.memory());
+
+/// Wraps [child] in a [MaterialApp] with [ProviderScope] overrides.
+Widget _testApp({
+  required Widget child,
+  required AppDatabase db,
+  List<Override> extraOverrides = const [],
+}) {
+  return ProviderScope(
+    overrides: [databaseProvider.overrideWithValue(db), ...extraOverrides],
+    child: MaterialApp(home: child),
+  );
+}
+
+void main() {
+  group('EntryCard', () {
+    testWidgets('displays Chinese title when available', (tester) async {
+      final entryData = EntryWithSubject(
+        entry: _fakeEntry(id: 1, tierId: 1, rank: 1000.0),
+        subject: _fakeSubject(
+          subjectId: 42,
+          nameCn: '命运石之门',
+          nameJp: 'Steins;Gate',
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 110,
+              height: 160,
+              child: EntryCard(entryData: entryData, onTap: () {}),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('命运石之门'), findsOneWidget);
+    });
+
+    testWidgets('falls back to Japanese title when Chinese is empty', (
+      tester,
+    ) async {
+      final entryData = EntryWithSubject(
+        entry: _fakeEntry(id: 1, tierId: 1, rank: 1000.0),
+        subject: _fakeSubject(subjectId: 42, nameCn: '', nameJp: 'Steins;Gate'),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 110,
+              height: 160,
+              child: EntryCard(entryData: entryData, onTap: () {}),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Steins;Gate'), findsOneWidget);
+    });
+
+    testWidgets('shows "Unknown" when no subject', (tester) async {
+      final entryData = EntryWithSubject(
+        entry: _fakeEntry(id: 1, tierId: 1, rank: 1000.0),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 110,
+              height: 160,
+              child: EntryCard(entryData: entryData, onTap: () {}),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Unknown'), findsOneWidget);
+    });
+
+    testWidgets('calls onTap when tapped', (tester) async {
+      var tapped = false;
+      final entryData = EntryWithSubject(
+        entry: _fakeEntry(id: 1, tierId: 1, rank: 1000.0),
+        subject: _fakeSubject(subjectId: 42, nameCn: 'Test'),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 110,
+              height: 160,
+              child: EntryCard(
+                entryData: entryData,
+                onTap: () => tapped = true,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(EntryCard));
+      expect(tapped, isTrue);
+    });
+
+    testWidgets('shows placeholder icon when no poster URL', (tester) async {
+      final entryData = EntryWithSubject(
+        entry: _fakeEntry(id: 1, tierId: 1, rank: 1000.0),
+        subject: _fakeSubject(subjectId: 42, nameCn: 'Test', posterUrl: ''),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 110,
+              height: 160,
+              child: EntryCard(entryData: entryData, onTap: () {}),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byIcon(Icons.movie_outlined), findsOneWidget);
+    });
+  });
+
+  group('ShelfPage', () {
+    testWidgets('shows loading indicator initially', (tester) async {
+      final db = _createTestDb();
+
+      await tester.pumpWidget(_testApp(child: const ShelfPage(), db: db));
+
+      // Initially shows loading
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+      await db.close();
+    });
+
+    testWidgets('displays seed tiers after loading', (tester) async {
+      final db = _createTestDb();
+
+      await tester.pumpWidget(_testApp(child: const ShelfPage(), db: db));
+      // Allow stream to emit
+      await tester.pumpAndSettle();
+
+      // Seed tiers: Inbox, S, A, B
+      expect(find.text('Inbox'), findsOneWidget);
+      expect(find.text('S'), findsOneWidget);
+      expect(find.text('A'), findsOneWidget);
+      expect(find.text('B'), findsOneWidget);
+
+      await db.close();
+    });
+
+    testWidgets('shows AppBar with title', (tester) async {
+      final db = _createTestDb();
+
+      await tester.pumpWidget(_testApp(child: const ShelfPage(), db: db));
+      await tester.pumpAndSettle();
+
+      expect(find.text('AnimeShelf'), findsOneWidget);
+
+      await db.close();
+    });
+
+    testWidgets('has search and settings action buttons', (tester) async {
+      final db = _createTestDb();
+
+      await tester.pumpWidget(_testApp(child: const ShelfPage(), db: db));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.search), findsOneWidget);
+      expect(find.byIcon(Icons.settings), findsOneWidget);
+
+      await db.close();
+    });
+
+    testWidgets('has FAB for adding tiers', (tester) async {
+      final db = _createTestDb();
+
+      await tester.pumpWidget(_testApp(child: const ShelfPage(), db: db));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(FloatingActionButton), findsOneWidget);
+      expect(find.byIcon(Icons.add), findsOneWidget);
+
+      await db.close();
+    });
+
+    testWidgets('FAB opens add tier bottom sheet', (tester) async {
+      final db = _createTestDb();
+
+      await tester.pumpWidget(_testApp(child: const ShelfPage(), db: db));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(FloatingActionButton));
+      await tester.pumpAndSettle();
+
+      expect(find.text('New Tier'), findsOneWidget);
+      expect(find.text('Add Tier'), findsOneWidget);
+
+      await db.close();
+    });
+
+    testWidgets('empty tier shows placeholder text', (tester) async {
+      final db = _createTestDb();
+
+      await tester.pumpWidget(_testApp(child: const ShelfPage(), db: db));
+      await tester.pumpAndSettle();
+
+      // Inbox shows special message, other tiers show "Drag entries here"
+      expect(find.text('Search and add anime to get started'), findsOneWidget);
+      expect(find.text('Drag entries here'), findsNWidgets(3));
+
+      await db.close();
+    });
+
+    testWidgets('tier header shows edit button', (tester) async {
+      final db = _createTestDb();
+
+      await tester.pumpWidget(_testApp(child: const ShelfPage(), db: db));
+      await tester.pumpAndSettle();
+
+      // Each tier has an edit button
+      expect(find.byIcon(Icons.edit_outlined), findsNWidgets(4));
+
+      await db.close();
+    });
+
+    testWidgets('non-inbox tiers have delete button', (tester) async {
+      final db = _createTestDb();
+
+      await tester.pumpWidget(_testApp(child: const ShelfPage(), db: db));
+      await tester.pumpAndSettle();
+
+      // 3 non-inbox tiers (S, A, B) have delete buttons
+      expect(find.byIcon(Icons.delete_outline), findsNWidgets(3));
+
+      await db.close();
+    });
+  });
+}
+
+// ── Fake data helpers ──
+
+/// Creates a fake [Entry] data class for testing.
+///
+/// Uses a private constructor-like approach via Drift's generated class.
+Entry _fakeEntry({
+  required int id,
+  required int tierId,
+  required double rank,
+  String note = '',
+}) {
+  return Entry(
+    id: id,
+    tierId: tierId,
+    primarySubjectId: 1,
+    entryRank: rank,
+    note: note,
+    createdAt: DateTime.now(),
+    updatedAt: DateTime.now(),
+  );
+}
+
+/// Creates a fake [Subject] for testing.
+Subject _fakeSubject({
+  required int subjectId,
+  String nameCn = '',
+  String nameJp = '',
+  String posterUrl = '',
+}) {
+  return Subject(
+    subjectId: subjectId,
+    nameCn: nameCn,
+    nameJp: nameJp,
+    posterUrl: posterUrl,
+    airDate: '',
+    eps: 0,
+    rating: 0.0,
+    summary: '',
+    lastFetchedAt: DateTime.now(),
+  );
+}

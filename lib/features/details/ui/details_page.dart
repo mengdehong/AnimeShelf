@@ -1,0 +1,213 @@
+import 'dart:ui';
+
+import 'package:anime_shelf/core/database/app_database.dart';
+import 'package:anime_shelf/features/details/providers/details_provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+
+/// Immersive detail page for an entry.
+///
+/// Features a full-bleed poster with glassmorphism overlay,
+/// metadata display, and a private notes editor.
+class DetailsPage extends HookConsumerWidget {
+  final int entryId;
+
+  const DetailsPage({super.key, required this.entryId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final detailAsync = ref.watch(entryDetailProvider(entryId));
+
+    return Scaffold(
+      body: detailAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline, size: 48),
+              const SizedBox(height: 16),
+              Text('Failed to load details: $error'),
+            ],
+          ),
+        ),
+        data: (detail) {
+          if (detail == null) {
+            return const Center(child: Text('Entry not found'));
+          }
+          return _DetailsContent(
+            entryId: entryId,
+            entry: detail.entry,
+            subject: detail.subject,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _DetailsContent extends HookConsumerWidget {
+  final int entryId;
+  final Entry entry;
+  final Subject? subject;
+
+  const _DetailsContent({
+    required this.entryId,
+    required this.entry,
+    this.subject,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final noteController = useTextEditingController(text: entry.note);
+    final posterUrl = subject?.posterUrl ?? '';
+    final title = (subject?.nameCn.isNotEmpty == true)
+        ? subject!.nameCn
+        : (subject?.nameJp ?? 'Unknown');
+    final originalTitle = subject?.nameJp ?? '';
+    final airDate = subject?.airDate ?? '';
+    final rating = subject?.rating ?? 0.0;
+    final summary = subject?.summary ?? '';
+
+    return CustomScrollView(
+      slivers: [
+        // Full-bleed poster with glassmorphism
+        SliverAppBar(
+          expandedHeight: MediaQuery.of(context).size.height * 0.45,
+          pinned: true,
+          flexibleSpace: FlexibleSpaceBar(
+            background: Stack(
+              fit: StackFit.expand,
+              children: [
+                Hero(
+                  tag: 'entry-poster-$entryId',
+                  child: posterUrl.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: posterUrl,
+                          fit: BoxFit.cover,
+                        )
+                      : Container(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.surfaceContainerHighest,
+                        ),
+                ),
+                // Glassmorphism overlay
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: ClipRect(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withValues(alpha: 0.0),
+                              Colors.black.withValues(alpha: 0.6),
+                            ],
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              title,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            if (originalTitle.isNotEmpty &&
+                                originalTitle != title)
+                              Text(
+                                originalTitle,
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.8),
+                                  fontSize: 14,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // Metadata + Notes
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Info chips
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (airDate.isNotEmpty)
+                      Chip(
+                        avatar: const Icon(Icons.calendar_today, size: 16),
+                        label: Text(airDate),
+                      ),
+                    if (rating > 0)
+                      Chip(
+                        avatar: const Icon(Icons.star, size: 16),
+                        label: Text(rating.toStringAsFixed(1)),
+                      ),
+                  ],
+                ),
+
+                // Summary
+                if (summary.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    'Summary',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(summary, style: Theme.of(context).textTheme.bodyMedium),
+                ],
+
+                // Notes
+                const SizedBox(height: 24),
+                Text(
+                  'Private Notes',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: noteController,
+                  maxLines: null,
+                  minLines: 3,
+                  decoration: const InputDecoration(
+                    hintText: 'Write your thoughts...',
+                  ),
+                  onChanged: (value) {
+                    ref
+                        .read(entryDetailProvider(entryId).notifier)
+                        .updateNote(value);
+                  },
+                ),
+                const SizedBox(height: 40),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
