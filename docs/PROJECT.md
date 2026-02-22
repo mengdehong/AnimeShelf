@@ -104,21 +104,65 @@
 采用 **Feature-first (按功能模块分包)**，配合 **Repository (仓库模式)** 分离 UI 与数据逻辑：
 
 ```text
-lib/
-├── core/                   # 核心通用层
-│   ├── theme/              # 主题配置 (樱花粉/B站红/暗黑模式及颜色定义)
-│   ├── network/            # Dio 网络客户端配置 (Bangumi API Base URL)
-│   ├── database/           # Drift 数据库初始化与实例（AppDatabase）
-│   └── utils/              # 通用工具类 (例如 CSV/Markdown 导出工具)
-├── models/                 # 数据模型层 (Drift Tables & Data Classes)
-│   ├── tier.dart           # 等级实体 (ID, 名称, 颜色, 排序)
-│   ├── subject.dart        # Bangumi 条目快照缓存 (subjectId, 标题, 海报, lastFetchedAt...)
-│   ├── entry.dart          # 书架卡片实体 (tierId, entryRank, note, primarySubjectId...)
-│   └── entry_subject.dart  # Entry 与 subject 的关联 (用于合并/拆分季)
-├── features/               # 按业务功能划分
-│   ├── shelf/              # 核心功能：书架主页 (看板拖拽 UI, Drift 读写逻辑)
-│   ├── search/             # 搜索功能 (Bangumi API 调用, 骨架屏, 搜索结果 UI)
-│   ├── details/            # 详情页面 (Hero动画, 详细元数据, 笔记编辑)
-│   └── settings/           # 设置与导出 (主题切换, 备份恢复)
-└── main.dart               # App 入口，初始化 DB 和 Riverpod ProviderScope
+├── docs/PROJECT.md                                    # Project blueprint (Chinese), read-only reference
+├── pubspec.yaml                                       # All dependencies declared
+├── analysis_options.yaml                              # Lint rules configured
+├── lib/
+│   ├── main.dart                                      # App entry point (ProviderScope + MaterialApp.router)
+│   ├── core/
+│   │   ├── database/app_database.dart                 # Drift @DriftDatabase + seed tiers
+│   │   ├── database/app_database.g.dart               # Generated Drift code
+│   │   ├── exceptions/api_exception.dart              # ApiException, NetworkTimeoutException, NoConnectionException
+│   │   ├── exceptions/database_exception.dart         # DatabaseException
+│   │   ├── network/bangumi_client.dart                # Dio client with retry interceptor
+│   │   ├── theme/app_theme.dart                       # 3 themes: sakuraPink, bilibiliRed, dark
+│   │   ├── theme/theme_notifier.dart                  # @riverpod ThemeNotifier + SharedPreferences
+│   │   ├── theme/theme_notifier.g.dart                # Generated
+│   │   ├── router.dart                                # GoRouter: /shelf, /search, /details/:entryId, /settings
+│   │   ├── providers.dart                             # databaseProvider, bangumiClientProvider
+│   │   ├── providers.g.dart                           # Generated
+│   │   └── utils/
+│   │       ├── rank_utils.dart                        # insertRank, needsRecompression, recompressRanks
+│   │       └── export_service.dart                    # JSON/CSV/MD export + JSON import
+│   ├── models/
+│   │   ├── tier.dart                                  # Drift Tiers table
+│   │   ├── subject.dart                               # Drift Subjects table (custom PK: subjectId)
+│   │   ├── entry.dart                                 # Drift Entries table
+│   │   └── entry_subject.dart                         # Drift EntrySubjects junction table
+│   └── features/
+│       ├── shelf/
+│       │   ├── data/shelf_repository.dart              # Full CRUD, rank math, watchTiersWithEntries
+│       │   ├── providers/shelf_provider.dart           # shelfRepositoryProvider, shelfTiersProvider
+│       │   ├── providers/shelf_provider.g.dart         # Generated
+│       │   └── ui/
+│       │       ├── shelf_page.dart                     # Main page with ReorderableListView for tier drag
+│       │       ├── tier_section.dart                   # DragTarget + LongPressDraggable for entries
+│       │       └── entry_card.dart                     # Poster card with Hero tag
+│       ├── search/
+│       │   ├── data/
+│       │   │   ├── bangumi_subject.dart                # @freezed BangumiSubject
+│       │   │   ├── bangumi_subject.freezed.dart        # Generated
+│       │   │   ├── bangumi_subject.g.dart              # Generated
+│       │   │   └── search_repository.dart              # Bangumi API search + cache
+│       │   ├── providers/search_provider.dart          # Debounced search provider
+│       │   ├── providers/search_provider.g.dart        # Generated
+│       │   └── ui/
+│       │       ├── search_page.dart                    # Search field + results + skeleton loading
+│       │       └── add_to_shelf_sheet.dart             # Tier selection bottom sheet
+│       ├── details/
+│       │   ├── providers/details_provider.dart         # EntryDetail with debounced note save
+│       │   ├── providers/details_provider.g.dart       # Generated
+│       │   └── ui/details_page.dart                   # Glassmorphism + Hero + notes editor
+│       └── settings/
+│           ├── providers/settings_provider.dart        # exportServiceProvider
+│           ├── providers/settings_provider.g.dart      # Generated
+│           └── ui/settings_page.dart                   # RadioGroup theme switcher + export/import
+└── test/
+    ├── unit/
+    │   ├── rank_utils_test.dart                        # 23 tests — pure logic
+    │   ├── shelf_repository_test.dart                  # 17 tests — in-memory Drift DB
+    │   ├── export_service_test.dart                    # 14 tests — in-memory Drift DB
+    │   └── search_repository_test.dart                 # 9 tests — mocked Dio via mocktail
+    └── widget/
+        └── shelf_page_test.dart                        # 14 tests — EntryCard + ShelfPage
 ```

@@ -62,14 +62,65 @@ Feature-first layout with Repository pattern. See `docs/PROJECT.md` section III.
 
 ```
 lib/
-  core/            # Shared: theme/, network/, database/, utils/
-  models/          # Drift tables & data classes (tier, subject, entry, entry_subject)
-  features/        # Feature modules: shelf/, search/, details/, settings/
-  main.dart        # Entry point: DB init + ProviderScope
+  core/
+    database/
+      app_database.dart       # Drift @DriftDatabase + seed tiers
+      app_database.g.dart     # Generated Drift code
+    exceptions/
+      api_exception.dart      # ApiException, NetworkTimeoutException, NoConnectionException
+      database_exception.dart # DatabaseException
+    network/
+      bangumi_client.dart     # Dio client with retry interceptor
+    theme/
+      app_theme.dart          # 3 themes: sakuraPink, bilibiliRed, dark
+      theme_notifier.dart     # @riverpod ThemeNotifier + SharedPreferences
+      theme_notifier.g.dart   # Generated
+    utils/
+      rank_utils.dart         # insertRank, needsRecompression, recompressRanks
+      export_service.dart     # JSON/CSV/MD export + JSON import
+    router.dart               # GoRouter: /shelf, /search, /details/:entryId, /settings
+    providers.dart            # databaseProvider, bangumiClientProvider
+    providers.g.dart          # Generated
+  models/
+    tier.dart                 # Drift Tiers table
+    subject.dart              # Drift Subjects table (custom PK: subjectId)
+    entry.dart                # Drift Entries table
+    entry_subject.dart        # Drift EntrySubjects junction table
+  features/
+    shelf/
+      data/shelf_repository.dart          # Full CRUD, rank math, watchTiersWithEntries
+      providers/shelf_provider.dart       # shelfRepositoryProvider, shelfTiersProvider
+      providers/shelf_provider.g.dart     # Generated
+      ui/shelf_page.dart                  # Main page with ReorderableListView for tier drag
+      ui/tier_section.dart                # DragTarget + LongPressDraggable for entries
+      ui/entry_card.dart                  # Poster card with Hero tag
+    search/
+      data/bangumi_subject.dart           # @freezed BangumiSubject
+      data/bangumi_subject.freezed.dart   # Generated
+      data/bangumi_subject.g.dart         # Generated
+      data/search_repository.dart         # Bangumi API search + local cache
+      providers/search_provider.dart      # Debounced search provider
+      providers/search_provider.g.dart    # Generated
+      ui/search_page.dart                 # Search field + results + skeleton loading
+      ui/add_to_shelf_sheet.dart          # Tier selection bottom sheet
+    details/
+      providers/details_provider.dart     # EntryDetail with debounced note save
+      providers/details_provider.g.dart   # Generated
+      ui/details_page.dart                # Glassmorphism + Hero + notes editor
+    settings/
+      providers/settings_provider.dart    # exportServiceProvider
+      providers/settings_provider.g.dart  # Generated
+      ui/settings_page.dart               # RadioGroup theme switcher + export/import
+  main.dart                               # Entry point: ProviderScope + MaterialApp.router
 test/
-  unit/            # Pure logic and repository tests
-  widget/          # Widget tests
-  integration/     # Integration / golden tests
+  unit/
+    rank_utils_test.dart          # 23 tests — pure rank math logic
+    shelf_repository_test.dart    # 17 tests — in-memory Drift DB
+    export_service_test.dart      # 14 tests — JSON/CSV/MD round-trips
+    search_repository_test.dart   # 9 tests — mocked Dio via mocktail
+  widget/
+    shelf_page_test.dart          # 14 tests — EntryCard + ShelfPage
+  integration/                    # (placeholder — not yet populated)
 ```
 
 ---
