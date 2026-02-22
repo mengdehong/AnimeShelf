@@ -1,3 +1,4 @@
+import 'package:anime_shelf/core/theme/app_theme.dart';
 import 'package:anime_shelf/core/utils/rank_utils.dart';
 import 'package:anime_shelf/features/shelf/data/shelf_repository.dart';
 import 'package:anime_shelf/features/shelf/providers/shelf_provider.dart';
@@ -153,6 +154,9 @@ class _ShelfContent extends HookConsumerWidget {
       return const Center(child: Text('No tiers yet. Tap + to add one.'));
     }
 
+    final metrics = Theme.of(context).extension<AppThemeMetrics>();
+    final sectionRadius = metrics?.sectionRadius ?? 16;
+
     return ReorderableListView.builder(
       padding: const EdgeInsets.only(bottom: 80),
       itemCount: tiers.length,
@@ -163,7 +167,7 @@ class _ShelfContent extends HookConsumerWidget {
           animation: animation,
           builder: (context, child) => Material(
             elevation: 4,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(sectionRadius),
             child: child,
           ),
           child: child,

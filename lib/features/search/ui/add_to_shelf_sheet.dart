@@ -50,7 +50,6 @@ class AddToShelfSheet extends ConsumerWidget {
                         : null,
                   ),
                   title: Text(tier.name),
-                  subtitle: Text('${tierData.entries.length} entries'),
                   onTap: () => _addToTier(context, ref, tier.id),
                 );
               }).toList(),

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:anime_shelf/core/theme/app_theme.dart';
 import 'package:anime_shelf/core/theme/theme_notifier.dart';
+import 'package:anime_shelf/core/window/window_settings_notifier.dart';
 import 'package:anime_shelf/features/settings/providers/settings_provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -14,6 +15,7 @@ class SettingsPage extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeIndex = ref.watch(themeNotifierProvider);
+    final hideTitleBar = ref.watch(windowSettingsNotifierProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -41,6 +43,33 @@ class SettingsPage extends HookConsumerWidget {
           ),
 
           const Divider(height: 32),
+
+          // ── Window Section (Linux desktop only) ──
+          if (Platform.isLinux) ...[
+            Text('Window', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            SwitchListTile(
+              secondary: const Icon(Icons.window),
+              title: const Text('Hide system title bar'),
+              subtitle: const Text('Use a custom in-app title bar instead'),
+              value: hideTitleBar,
+              onChanged: (value) async {
+                await ref
+                    .read(windowSettingsNotifierProvider.notifier)
+                    .setHideTitleBar(value);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Restart the app for this change to fully take effect.',
+                      ),
+                    ),
+                  );
+                }
+              },
+            ),
+            const Divider(height: 32),
+          ],
 
           // ── Export Section ──
           Text('Export', style: Theme.of(context).textTheme.titleMedium),

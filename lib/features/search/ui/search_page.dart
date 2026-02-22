@@ -1,3 +1,4 @@
+import 'package:anime_shelf/core/theme/app_theme.dart';
 import 'package:anime_shelf/features/search/data/bangumi_subject.dart';
 import 'package:anime_shelf/features/search/providers/search_provider.dart';
 import 'package:anime_shelf/features/search/ui/add_to_shelf_sheet.dart';
@@ -92,11 +93,13 @@ class _SearchResultTile extends ConsumerWidget {
     final subtitle = subject.name;
     final posterUrl = subject.images?.medium ?? '';
     final rating = subject.rating?.score ?? 0.0;
+    final metrics = Theme.of(context).extension<AppThemeMetrics>();
+    final posterRadius = metrics?.posterRadius ?? 8;
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(posterRadius),
         child: SizedBox(
           width: 48,
           height: 68,
@@ -175,10 +178,14 @@ class _SkeletonTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final shimmerColor = Theme.of(context).colorScheme.surfaceContainerHighest;
+    final metrics = Theme.of(context).extension<AppThemeMetrics>();
+    final tileRadius = metrics?.tileRadius ?? 4;
+    final posterRadius = metrics?.posterRadius ?? 8;
+
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(posterRadius),
         child: Container(width: 48, height: 68, color: shimmerColor),
       ),
       title: Container(
@@ -186,7 +193,7 @@ class _SkeletonTile extends StatelessWidget {
         width: double.infinity,
         decoration: BoxDecoration(
           color: shimmerColor,
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(tileRadius),
         ),
       ),
       subtitle: Container(
@@ -195,7 +202,7 @@ class _SkeletonTile extends StatelessWidget {
         margin: const EdgeInsets.only(top: 6),
         decoration: BoxDecoration(
           color: shimmerColor,
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(tileRadius),
         ),
       ),
     );

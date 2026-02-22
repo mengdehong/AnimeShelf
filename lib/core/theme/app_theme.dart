@@ -1,22 +1,98 @@
+import 'dart:ui' show lerpDouble;
+
 import 'package:flutter/material.dart';
 
-/// Soft UI design theme factory for AnimeShelf.
-///
-/// Provides three built-in themes: Sakura Pink, Bilibili Red,
-/// and a dark mode with non-pure-black tones.
+@immutable
+class AppThemeMetrics extends ThemeExtension<AppThemeMetrics> {
+  const AppThemeMetrics({
+    required this.cardRadius,
+    required this.controlRadius,
+    required this.sectionRadius,
+    required this.posterRadius,
+    required this.tileRadius,
+    required this.cardElevation,
+    required this.cardShadowOpacity,
+    required this.fabCircular,
+    required this.appBarBackground,
+    required this.inputFillColor,
+  });
+
+  final double cardRadius;
+  final double controlRadius;
+  final double sectionRadius;
+  final double posterRadius;
+  final double tileRadius;
+  final double cardElevation;
+  final double cardShadowOpacity;
+  final bool fabCircular;
+  final Color appBarBackground;
+  final Color inputFillColor;
+
+  @override
+  AppThemeMetrics copyWith({
+    double? cardRadius,
+    double? controlRadius,
+    double? sectionRadius,
+    double? posterRadius,
+    double? tileRadius,
+    double? cardElevation,
+    double? cardShadowOpacity,
+    bool? fabCircular,
+    Color? appBarBackground,
+    Color? inputFillColor,
+  }) {
+    return AppThemeMetrics(
+      cardRadius: cardRadius ?? this.cardRadius,
+      controlRadius: controlRadius ?? this.controlRadius,
+      sectionRadius: sectionRadius ?? this.sectionRadius,
+      posterRadius: posterRadius ?? this.posterRadius,
+      tileRadius: tileRadius ?? this.tileRadius,
+      cardElevation: cardElevation ?? this.cardElevation,
+      cardShadowOpacity: cardShadowOpacity ?? this.cardShadowOpacity,
+      fabCircular: fabCircular ?? this.fabCircular,
+      appBarBackground: appBarBackground ?? this.appBarBackground,
+      inputFillColor: inputFillColor ?? this.inputFillColor,
+    );
+  }
+
+  @override
+  AppThemeMetrics lerp(ThemeExtension<AppThemeMetrics>? other, double t) {
+    if (other is! AppThemeMetrics) {
+      return this;
+    }
+
+    return AppThemeMetrics(
+      cardRadius: lerpDouble(cardRadius, other.cardRadius, t) ?? cardRadius,
+      controlRadius:
+          lerpDouble(controlRadius, other.controlRadius, t) ?? controlRadius,
+      sectionRadius:
+          lerpDouble(sectionRadius, other.sectionRadius, t) ?? sectionRadius,
+      posterRadius:
+          lerpDouble(posterRadius, other.posterRadius, t) ?? posterRadius,
+      tileRadius: lerpDouble(tileRadius, other.tileRadius, t) ?? tileRadius,
+      cardElevation:
+          lerpDouble(cardElevation, other.cardElevation, t) ?? cardElevation,
+      cardShadowOpacity:
+          lerpDouble(cardShadowOpacity, other.cardShadowOpacity, t) ??
+          cardShadowOpacity,
+      fabCircular: t < 0.5 ? fabCircular : other.fabCircular,
+      appBarBackground:
+          Color.lerp(appBarBackground, other.appBarBackground, t) ??
+          appBarBackground,
+      inputFillColor:
+          Color.lerp(inputFillColor, other.inputFillColor, t) ?? inputFillColor,
+    );
+  }
+}
+
 class AppTheme {
   AppTheme._();
 
-  static const double _borderRadius = 16.0;
-  static const double _cardRadius = 20.0;
-
-  // ── Sakura Pink (default light theme) ──
-
   static ThemeData sakuraPink() {
-    const primary = Color(0xFFE91E8C);
-    const surface = Color(0xFFFFF5F9);
+    const primary = Color(0xFFF09199);
+    const surface = Color(0xFFF5F5F7);
     const card = Color(0xFFFFFFFF);
-    const text = Color(0xFF2D2D2D);
+    const text = Color(0xFF222222);
 
     return _buildTheme(
       brightness: Brightness.light,
@@ -24,17 +100,27 @@ class AppTheme {
       surface: surface,
       card: card,
       text: text,
-      seedColor: primary,
+      metrics: const AppThemeMetrics(
+        cardRadius: 20,
+        controlRadius: 16,
+        sectionRadius: 16,
+        posterRadius: 12,
+        tileRadius: 8,
+        cardElevation: 1,
+        cardShadowOpacity: 0.04,
+        fabCircular: false,
+        appBarBackground: surface,
+        inputFillColor: card,
+      ),
     );
   }
-
-  // ── Bilibili Red ──
 
   static ThemeData bilibiliRed() {
     const primary = Color(0xFFFB7299);
-    const surface = Color(0xFFFFF8F0);
+    const surface = Color(0xFFF6F7F8);
     const card = Color(0xFFFFFFFF);
-    const text = Color(0xFF2D2D2D);
+    const text = Color(0xFF18191C);
+    const bilibiliBlue = Color(0xFF00AEEC);
 
     return _buildTheme(
       brightness: Brightness.light,
@@ -42,17 +128,27 @@ class AppTheme {
       surface: surface,
       card: card,
       text: text,
-      seedColor: primary,
+      secondary: bilibiliBlue,
+      metrics: const AppThemeMetrics(
+        cardRadius: 12,
+        controlRadius: 12,
+        sectionRadius: 12,
+        posterRadius: 6,
+        tileRadius: 6,
+        cardElevation: 1,
+        cardShadowOpacity: 0.03,
+        fabCircular: true,
+        appBarBackground: card,
+        inputFillColor: Color(0xFFF1F2F3),
+      ),
     );
   }
 
-  // ── Dark Mode ──
-
   static ThemeData dark() {
-    const primary = Color(0xFFBB86FC);
+    const primary = Color(0xFFCBA6F7);
     const surface = Color(0xFF1E1E2E);
-    const card = Color(0xFF2A2A3C);
-    const text = Color(0xFFE0E0E0);
+    const card = Color(0xFF313244);
+    const text = Color(0xFFCDD6F4);
 
     return _buildTheme(
       brightness: Brightness.dark,
@@ -60,7 +156,18 @@ class AppTheme {
       surface: surface,
       card: card,
       text: text,
-      seedColor: primary,
+      metrics: const AppThemeMetrics(
+        cardRadius: 16,
+        controlRadius: 14,
+        sectionRadius: 16,
+        posterRadius: 8,
+        tileRadius: 8,
+        cardElevation: 2,
+        cardShadowOpacity: 0.20,
+        fabCircular: false,
+        appBarBackground: surface,
+        inputFillColor: card,
+      ),
     );
   }
 
@@ -70,13 +177,19 @@ class AppTheme {
     required Color surface,
     required Color card,
     required Color text,
-    required Color seedColor,
+    required AppThemeMetrics metrics,
+    Color? secondary,
   }) {
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: seedColor,
+    final baseScheme = ColorScheme.fromSeed(
+      seedColor: primary,
       brightness: brightness,
-      primary: primary,
       surface: surface,
+    );
+    final colorScheme = baseScheme.copyWith(
+      primary: primary,
+      secondary: secondary ?? baseScheme.secondary,
+      surface: surface,
+      onSurface: text,
     );
 
     return ThemeData(
@@ -84,33 +197,39 @@ class AppTheme {
       brightness: brightness,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: surface,
+      extensions: <ThemeExtension<dynamic>>[metrics],
       cardTheme: CardThemeData(
         color: card,
-        elevation: 2,
-        shadowColor: Colors.black.withValues(alpha: 0.08),
+        elevation: metrics.cardElevation,
+        shadowColor: Colors.black.withValues(alpha: metrics.cardShadowOpacity),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(_cardRadius),
+          borderRadius: BorderRadius.circular(metrics.cardRadius),
         ),
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: surface,
+        backgroundColor: metrics.appBarBackground,
         foregroundColor: text,
         elevation: 0,
         scrolledUnderElevation: 1,
+        surfaceTintColor: Colors.transparent,
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: primary,
-        foregroundColor: Colors.white,
-        elevation: 4,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(_borderRadius),
-        ),
+        foregroundColor: brightness == Brightness.light
+            ? Colors.white
+            : Colors.black,
+        elevation: 3,
+        shape: metrics.fabCircular
+            ? const CircleBorder()
+            : RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(metrics.controlRadius),
+              ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: card,
+        fillColor: metrics.inputFillColor,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(_borderRadius),
+          borderRadius: BorderRadius.circular(metrics.controlRadius),
           borderSide: BorderSide.none,
         ),
         contentPadding: const EdgeInsets.symmetric(
@@ -119,30 +238,47 @@ class AppTheme {
         ),
       ),
       bottomSheetTheme: BottomSheetThemeData(
-        backgroundColor: surface,
-        shape: const RoundedRectangleBorder(
+        backgroundColor: card,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(
-            top: Radius.circular(_cardRadius),
+            top: Radius.circular(metrics.cardRadius),
           ),
         ),
       ),
       chipTheme: ChipThemeData(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(metrics.tileRadius),
+        ),
+      ),
+      listTileTheme: ListTileThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(metrics.tileRadius),
+        ),
+      ),
+      dividerTheme: DividerThemeData(
+        color: brightness == Brightness.light
+            ? Colors.black.withValues(alpha: 0.06)
+            : Colors.white.withValues(alpha: 0.08),
+        thickness: 1,
+        space: 1,
       ),
       textTheme: TextTheme(
         headlineLarge: TextStyle(color: text, fontWeight: FontWeight.bold),
         headlineMedium: TextStyle(color: text, fontWeight: FontWeight.w600),
         bodyLarge: TextStyle(color: text),
         bodyMedium: TextStyle(color: text.withValues(alpha: 0.8)),
-        bodySmall: TextStyle(color: text.withValues(alpha: 0.6)),
+        bodySmall: TextStyle(color: text.withValues(alpha: 0.55)),
+        labelSmall: TextStyle(
+          color: text.withValues(alpha: 0.5),
+          letterSpacing: 0.4,
+        ),
       ),
     );
   }
 
-  /// Returns a list of all available themes.
   static List<ThemeData> get allThemes => [sakuraPink(), bilibiliRed(), dark()];
 
-  /// Human-readable names for each theme index.
   static const List<String> themeNames = [
     'Sakura Pink',
     'Bilibili Red',

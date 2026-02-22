@@ -1,3 +1,4 @@
+import 'package:anime_shelf/core/theme/app_theme.dart';
 import 'package:anime_shelf/features/shelf/data/shelf_repository.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -15,17 +16,19 @@ class EntryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final subject = entryData.subject;
+    final metrics = Theme.of(context).extension<AppThemeMetrics>();
     final title = subject?.nameCn.isNotEmpty == true
         ? subject!.nameCn
         : (subject?.nameJp ?? 'Unknown');
     final posterUrl = subject?.posterUrl ?? '';
+    final posterRadius = metrics?.posterRadius ?? 12;
 
     return GestureDetector(
       onTap: onTap,
       child: Hero(
         tag: 'entry-poster-${entryData.entry.id}',
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(posterRadius),
           child: Stack(
             fit: StackFit.expand,
             children: [

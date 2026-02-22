@@ -1,4 +1,5 @@
 import 'package:anime_shelf/core/database/app_database.dart';
+import 'package:anime_shelf/core/theme/app_theme.dart';
 import 'package:anime_shelf/core/utils/rank_utils.dart';
 import 'package:anime_shelf/features/shelf/data/shelf_repository.dart';
 import 'package:anime_shelf/features/shelf/providers/shelf_provider.dart';
@@ -26,6 +27,10 @@ class TierSection extends HookConsumerWidget {
     final tier = tierData.tier;
     final entries = tierData.entries;
     final tierColor = Color(tier.colorValue);
+    final metrics = Theme.of(context).extension<AppThemeMetrics>();
+    final sectionRadius = metrics?.sectionRadius ?? 16;
+    final posterRadius = metrics?.posterRadius ?? 12;
+    final cardShadow = Theme.of(context).cardTheme.shadowColor;
 
     return DragTarget<_EntryDragData>(
       onWillAcceptWithDetails: (details) => true,
@@ -41,11 +46,11 @@ class TierSection extends HookConsumerWidget {
             color: isHovering
                 ? tierColor.withValues(alpha: 0.12)
                 : Theme.of(context).cardTheme.color,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(sectionRadius),
             border: isHovering ? Border.all(color: tierColor, width: 2) : null,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
+                color: cardShadow ?? Colors.black.withValues(alpha: 0.04),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -57,7 +62,6 @@ class TierSection extends HookConsumerWidget {
               _TierHeader(
                 tier: tier,
                 tierColor: tierColor,
-                entryCount: entries.length,
                 onEdit: () => _showEditDialog(context, ref),
                 onDelete: tier.isInbox
                     ? null
@@ -93,6 +97,7 @@ class TierSection extends HookConsumerWidget {
                         entryData,
                         index,
                         entries,
+                        posterRadius,
                       );
                     }).toList(),
                   ),
@@ -110,6 +115,7 @@ class TierSection extends HookConsumerWidget {
     EntryWithSubject entryData,
     int index,
     List<EntryWithSubject> entries,
+    double posterRadius,
   ) {
     final dragData = _EntryDragData(
       entryId: entryData.entry.id,
@@ -120,7 +126,7 @@ class TierSection extends HookConsumerWidget {
       data: dragData,
       feedback: Material(
         elevation: 8,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(posterRadius),
         child: Opacity(
           opacity: 0.85,
           child: SizedBox(
@@ -267,14 +273,12 @@ class TierSection extends HookConsumerWidget {
 class _TierHeader extends StatelessWidget {
   final Tier tier;
   final Color tierColor;
-  final int entryCount;
   final VoidCallback onEdit;
   final VoidCallback? onDelete;
 
   const _TierHeader({
     required this.tier,
     required this.tierColor,
-    required this.entryCount,
     required this.onEdit,
     this.onDelete,
   });
@@ -303,8 +307,6 @@ class _TierHeader extends StatelessWidget {
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
-          Text('$entryCount', style: Theme.of(context).textTheme.bodySmall),
-          const SizedBox(width: 4),
           IconButton(
             icon: const Icon(Icons.edit_outlined, size: 18),
             onPressed: onEdit,
