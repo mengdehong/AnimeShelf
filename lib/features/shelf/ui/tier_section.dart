@@ -13,11 +13,13 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 /// The section itself is a [DragTarget] for entries being dragged
 /// across tiers. The header shows tier name, emoji, color, and actions.
 class TierSection extends HookConsumerWidget {
+  final int index;
   final TierWithEntries tierData;
   final List<TierWithEntries> allTiers;
 
   const TierSection({
     super.key,
+    required this.index,
     required this.tierData,
     required this.allTiers,
   });
@@ -60,12 +62,10 @@ class TierSection extends HookConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _TierHeader(
+                index: index,
                 tier: tier,
                 tierColor: tierColor,
                 onEdit: () => _showEditDialog(context, ref),
-                onDelete: tier.isInbox
-                    ? null
-                    : () => _confirmDelete(context, ref),
               ),
               if (entries.isEmpty)
                 Padding(
@@ -209,9 +209,26 @@ class TierSection extends HookConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'Edit Tier',
-              style: Theme.of(context).textTheme.headlineMedium,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Edit Tier',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                if (!tier.isInbox)
+                  IconButton(
+                    icon: Icon(
+                      Icons.delete_outline,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _confirmDelete(context, ref);
+                    },
+                    tooltip: 'Delete Tier',
+                  ),
+              ],
             ),
             const SizedBox(height: 16),
             TextField(
@@ -271,16 +288,16 @@ class TierSection extends HookConsumerWidget {
 
 /// Tier header row with name, emoji, color chip, and action buttons.
 class _TierHeader extends StatelessWidget {
+  final int index;
   final Tier tier;
   final Color tierColor;
   final VoidCallback onEdit;
-  final VoidCallback? onDelete;
 
   const _TierHeader({
+    required this.index,
     required this.tier,
     required this.tierColor,
     required this.onEdit,
-    this.onDelete,
   });
 
   @override
@@ -289,35 +306,39 @@ class _TierHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
       child: Row(
         children: [
-          Container(
-            width: 14,
-            height: 14,
-            decoration: BoxDecoration(color: tierColor, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 8),
-          if (tier.emoji.isNotEmpty) ...[
-            Text(tier.emoji, style: const TextStyle(fontSize: 18)),
-            const SizedBox(width: 6),
-          ],
           Expanded(
-            child: Text(
-              tier.name,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+            child: ReorderableDragStartListener(
+              index: index,
+              child: GestureDetector(
+                onDoubleTap: onEdit,
+                behavior: HitTestBehavior.opaque,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 14,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: tierColor,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    if (tier.emoji.isNotEmpty) ...[
+                      Text(tier.emoji, style: const TextStyle(fontSize: 18)),
+                      const SizedBox(width: 6),
+                    ],
+                    Expanded(
+                      child: Text(
+                        tier.name,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.edit_outlined, size: 18),
-            onPressed: onEdit,
-            visualDensity: VisualDensity.compact,
-          ),
-          if (onDelete != null)
-            IconButton(
-              icon: const Icon(Icons.delete_outline, size: 18),
-              onPressed: onDelete,
-              visualDensity: VisualDensity.compact,
-            ),
         ],
       ),
     );

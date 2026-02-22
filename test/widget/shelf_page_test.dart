@@ -232,26 +232,39 @@ void main() {
       await db.close();
     });
 
-    testWidgets('tier header shows edit button', (tester) async {
+    testWidgets('tier header double tap shows edit dialog', (tester) async {
       final db = _createTestDb();
 
       await tester.pumpWidget(_testApp(child: const ShelfPage(), db: db));
       await tester.pumpAndSettle();
 
-      // Each tier has an edit button
-      expect(find.byIcon(Icons.edit_outlined), findsNWidgets(4));
+      // Double tap on a tier name (e.g. Inbox)
+      await tester.tap(find.text('Inbox'));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.tap(find.text('Inbox'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Edit Tier'), findsOneWidget);
 
       await db.close();
     });
 
-    testWidgets('non-inbox tiers have delete button', (tester) async {
+    testWidgets('non-inbox tiers have delete button in edit dialog', (
+      tester,
+    ) async {
       final db = _createTestDb();
 
       await tester.pumpWidget(_testApp(child: const ShelfPage(), db: db));
       await tester.pumpAndSettle();
 
-      // 3 non-inbox tiers (S, A, B) have delete buttons
-      expect(find.byIcon(Icons.delete_outline), findsNWidgets(3));
+      // Double tap a non-inbox tier (e.g. S)
+      await tester.tap(find.text('S'));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.tap(find.text('S'));
+      await tester.pumpAndSettle();
+
+      // Dialog should have a delete button
+      expect(find.byTooltip('Delete Tier'), findsOneWidget);
 
       await db.close();
     });
