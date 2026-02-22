@@ -2,9 +2,11 @@ import 'dart:ui';
 
 import 'package:anime_shelf/core/database/app_database.dart';
 import 'package:anime_shelf/features/details/providers/details_provider.dart';
+import 'package:anime_shelf/features/shelf/providers/shelf_provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 /// Immersive detail page for an entry.
@@ -77,6 +79,66 @@ class _DetailsContent extends HookConsumerWidget {
         SliverAppBar(
           expandedHeight: MediaQuery.of(context).size.height * 0.45,
           pinned: true,
+          leading: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: IconButton(
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.black.withValues(alpha: 0.3),
+                foregroundColor: Colors.white,
+              ),
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => context.pop(),
+            ),
+          ),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: IconButton(
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.black.withValues(alpha: 0.3),
+                  foregroundColor: Colors.white,
+                ),
+                icon: const Icon(Icons.delete_outline),
+                tooltip: 'Remove from shelf',
+                onPressed: () async {
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Remove from shelf?'),
+                      content: const Text(
+                        'Are you sure you want to remove this anime from your shelf? '
+                        'This action cannot be undone.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(false),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(true),
+                          child: Text(
+                            'Delete',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (confirm == true && context.mounted) {
+                    await ref
+                        .read(shelfRepositoryProvider)
+                        .deleteEntry(entryId);
+                    if (context.mounted) {
+                      context.pop();
+                    }
+                  }
+                },
+              ),
+            ),
+          ],
           flexibleSpace: FlexibleSpaceBar(
             background: Stack(
               fit: StackFit.expand,

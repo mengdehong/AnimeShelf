@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:anime_shelf/core/theme/app_theme.dart';
@@ -115,6 +116,22 @@ class SettingsPage extends HookConsumerWidget {
     String format,
   ) async {
     try {
+      if (Platform.isLinux) {
+        final savePath = await _exportToLinuxFile(ref, format);
+        if (context.mounted) {
+          if (savePath == null) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Export cancelled')));
+          } else {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('Exported to $savePath')));
+          }
+        }
+        return;
+      }
+
       final exportService = ref.read(exportServiceProvider);
       switch (format) {
         case 'json':
@@ -136,6 +153,46 @@ class SettingsPage extends HookConsumerWidget {
         ).showSnackBar(SnackBar(content: Text('Export failed: $e')));
       }
     }
+  }
+
+  Future<String?> _exportToLinuxFile(WidgetRef ref, String format) async {
+    final exportService = ref.read(exportServiceProvider);
+    late final String content;
+    late final String fileName;
+    late final String extension;
+
+    switch (format) {
+      case 'json':
+        final data = await exportService.exportJson();
+        content = const JsonEncoder.withIndent('  ').convert(data);
+        fileName = 'animeshelf_backup.json';
+        extension = 'json';
+      case 'csv':
+        content = await exportService.exportCsv();
+        fileName = 'animeshelf_export.csv';
+        extension = 'csv';
+      case 'md':
+        content = await exportService.exportMarkdown();
+        fileName = 'animeshelf_export.md';
+        extension = 'md';
+      default:
+        throw ArgumentError('Unsupported export format: $format');
+    }
+
+    final savePath = await FilePicker.platform.saveFile(
+      dialogTitle: 'Save export file',
+      fileName: fileName,
+      type: FileType.custom,
+      allowedExtensions: [extension],
+    );
+
+    if (savePath == null || savePath.isEmpty) {
+      return null;
+    }
+
+    final file = File(savePath);
+    await file.writeAsString(content);
+    return file.path;
   }
 
   Future<void> _import(BuildContext context, WidgetRef ref) async {

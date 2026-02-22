@@ -22,8 +22,8 @@ class ShelfPage extends HookConsumerWidget {
         title: const Text('AnimeShelf'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () => context.push('/search'),
+            icon: const Icon(Icons.add),
+            onPressed: () => _showAddTierDialog(context, ref),
           ),
           IconButton(
             icon: const Icon(Icons.settings),
@@ -51,8 +51,8 @@ class ShelfPage extends HookConsumerWidget {
         data: (tiers) => _ShelfContent(tiers: tiers),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddTierDialog(context, ref),
-        child: const Icon(Icons.add),
+        onPressed: () => context.push('/search'),
+        child: const Icon(Icons.search),
       ),
     );
   }

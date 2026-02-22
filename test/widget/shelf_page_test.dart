@@ -186,31 +186,33 @@ void main() {
       await tester.pumpWidget(_testApp(child: const ShelfPage(), db: db));
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.search), findsOneWidget);
+      expect(find.byIcon(Icons.add), findsOneWidget);
       expect(find.byIcon(Icons.settings), findsOneWidget);
 
       await db.close();
     });
 
-    testWidgets('has FAB for adding tiers', (tester) async {
+    testWidgets('has FAB for searching anime', (tester) async {
       final db = _createTestDb();
 
       await tester.pumpWidget(_testApp(child: const ShelfPage(), db: db));
       await tester.pumpAndSettle();
 
       expect(find.byType(FloatingActionButton), findsOneWidget);
-      expect(find.byIcon(Icons.add), findsOneWidget);
+      expect(find.byIcon(Icons.search), findsOneWidget);
 
       await db.close();
     });
 
-    testWidgets('FAB opens add tier bottom sheet', (tester) async {
+    testWidgets('AppBar add button opens add tier bottom sheet', (
+      tester,
+    ) async {
       final db = _createTestDb();
 
       await tester.pumpWidget(_testApp(child: const ShelfPage(), db: db));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byType(FloatingActionButton));
+      await tester.tap(find.byIcon(Icons.add));
       await tester.pumpAndSettle();
 
       expect(find.text('New Tier'), findsOneWidget);

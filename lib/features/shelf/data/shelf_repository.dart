@@ -28,34 +28,44 @@ class ShelfRepository {
   /// Watches all tiers ordered by [tierSort], each with its entries
   /// ordered by [entryRank].
   Stream<List<TierWithEntries>> watchTiersWithEntries() {
-    final tiersQuery = _db.select(_db.tiers)
-      ..orderBy([(t) => OrderingTerm.asc(t.tierSort)]);
+    final query =
+        _db.select(_db.tiers).join([
+          leftOuterJoin(
+            _db.entries,
+            _db.entries.tierId.equalsExp(_db.tiers.id),
+          ),
+          leftOuterJoin(
+            _db.subjects,
+            _db.subjects.subjectId.equalsExp(_db.entries.primarySubjectId),
+          ),
+        ])..orderBy([
+          OrderingTerm.asc(_db.tiers.tierSort),
+          OrderingTerm.asc(_db.entries.entryRank),
+        ]);
 
-    return tiersQuery.watch().asyncMap((tierList) async {
+    return query.watch().map((rows) {
+      final tierMap = <int, TierWithEntries>{};
       final result = <TierWithEntries>[];
-      for (final tier in tierList) {
-        final entriesQuery =
-            _db.select(_db.entries).join([
-                leftOuterJoin(
-                  _db.subjects,
-                  _db.subjects.subjectId.equalsExp(
-                    _db.entries.primarySubjectId,
-                  ),
-                ),
-              ])
-              ..where(_db.entries.tierId.equals(tier.id))
-              ..orderBy([OrderingTerm.asc(_db.entries.entryRank)]);
 
-        final rows = await entriesQuery.get();
-        final entries = rows.map((row) {
-          return EntryWithSubject(
-            entry: row.readTable(_db.entries),
-            subject: row.readTableOrNull(_db.subjects),
+      for (final row in rows) {
+        final tier = row.readTable(_db.tiers);
+        final entry = row.readTableOrNull(_db.entries);
+        final subject = row.readTableOrNull(_db.subjects);
+
+        var tierWithEntries = tierMap[tier.id];
+        if (tierWithEntries == null) {
+          tierWithEntries = TierWithEntries(tier: tier, entries: []);
+          tierMap[tier.id] = tierWithEntries;
+          result.add(tierWithEntries);
+        }
+
+        if (entry != null) {
+          tierWithEntries.entries.add(
+            EntryWithSubject(entry: entry, subject: subject),
           );
-        }).toList();
-
-        result.add(TierWithEntries(tier: tier, entries: entries));
+        }
       }
+
       return result;
     });
   }

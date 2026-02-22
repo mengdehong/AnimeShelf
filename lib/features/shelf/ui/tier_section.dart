@@ -61,11 +61,35 @@ class TierSection extends HookConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _TierHeader(
-                index: index,
-                tier: tier,
-                tierColor: tierColor,
-                onEdit: () => _showEditDialog(context, ref),
+              DragTarget<_EntryDragData>(
+                onWillAcceptWithDetails: (details) =>
+                    details.data.sourceTierId != tierData.tier.id ||
+                    entries.isNotEmpty &&
+                        details.data.entryId != entries.first.entry.id,
+                onAcceptWithDetails: (details) {
+                  _handleDrop(ref, details.data, 0);
+                },
+                builder: (context, candidateData, rejectedData) {
+                  final isHoveringHeader = candidateData.isNotEmpty;
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    decoration: BoxDecoration(
+                      color: isHoveringHeader
+                          ? tierColor.withValues(alpha: 0.15)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(sectionRadius),
+                        topRight: Radius.circular(sectionRadius),
+                      ),
+                    ),
+                    child: _TierHeader(
+                      index: index,
+                      tier: tier,
+                      tierColor: tierColor,
+                      onEdit: () => _showEditDialog(context, ref),
+                    ),
+                  );
+                },
               ),
               if (entries.isEmpty)
                 Padding(
@@ -145,9 +169,9 @@ class TierSection extends HookConsumerWidget {
         ),
       ),
       child: DragTarget<_EntryDragData>(
-        onWillAcceptWithDetails: (details) =>
-            details.data.entryId != entryData.entry.id,
+        onWillAcceptWithDetails: (details) => true,
         onAcceptWithDetails: (details) {
+          if (details.data.entryId == entryData.entry.id) return;
           _handleDrop(ref, details.data, index);
         },
         builder: (context, candidateData, rejectedData) {
@@ -167,11 +191,20 @@ class TierSection extends HookConsumerWidget {
   void _handleDrop(WidgetRef ref, _EntryDragData data, int targetIndex) {
     final entries = tierData.entries;
 
-    final double? prev = targetIndex > 0
-        ? entries[targetIndex - 1].entry.entryRank
+    // Adjust the target index if we are moving the item backwards within the same tier
+    int adjustedIndex = targetIndex;
+    if (data.sourceTierId == tierData.tier.id && targetIndex < entries.length) {
+      final sourceIndex = entries.indexWhere((e) => e.entry.id == data.entryId);
+      if (sourceIndex != -1 && sourceIndex < targetIndex) {
+        adjustedIndex = targetIndex + 1;
+      }
+    }
+
+    final double? prev = adjustedIndex > 0
+        ? entries[adjustedIndex - 1].entry.entryRank
         : null;
-    final double? next = targetIndex < entries.length
-        ? entries[targetIndex].entry.entryRank
+    final double? next = adjustedIndex < entries.length
+        ? entries[adjustedIndex].entry.entryRank
         : null;
 
     final newRank = RankUtils.insertRank(prev, next);
