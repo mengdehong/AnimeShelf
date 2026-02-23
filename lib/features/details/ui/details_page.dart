@@ -1,4 +1,8 @@
+import 'dart:io';
+
 import 'package:anime_shelf/core/database/app_database.dart';
+import 'package:anime_shelf/core/window/window_controls.dart';
+import 'package:anime_shelf/core/window/window_settings_notifier.dart';
 import 'package:anime_shelf/features/details/providers/details_provider.dart';
 import 'package:anime_shelf/features/shelf/providers/shelf_provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -71,6 +75,9 @@ class _DetailsContent extends HookConsumerWidget {
     final rating = subject?.rating ?? 0.0;
     final summary = subject?.summary ?? '';
 
+    final isDesktopCustomBar =
+        Platform.isLinux && ref.watch(windowSettingsNotifierProvider);
+
     return CustomScrollView(
       slivers: [
         // Large poster header
@@ -136,6 +143,14 @@ class _DetailsContent extends HookConsumerWidget {
                 },
               ),
             ),
+            if (isDesktopCustomBar)
+              Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: WindowControls(
+                  foregroundColor: Colors.white,
+                  buttonBackgroundColor: Colors.black.withValues(alpha: 0.3),
+                ),
+              ),
           ],
           flexibleSpace: FlexibleSpaceBar(
             background: Stack(

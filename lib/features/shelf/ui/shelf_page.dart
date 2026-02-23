@@ -1,5 +1,6 @@
 import 'package:anime_shelf/core/theme/app_theme.dart';
 import 'package:anime_shelf/core/utils/rank_utils.dart';
+import 'package:anime_shelf/core/window/fused_app_bar.dart';
 import 'package:anime_shelf/features/shelf/data/shelf_repository.dart';
 import 'package:anime_shelf/features/shelf/providers/shelf_provider.dart';
 import 'package:anime_shelf/features/shelf/ui/tier_section.dart';
@@ -18,8 +19,9 @@ class ShelfPage extends HookConsumerWidget {
     final tiersAsync = ref.watch(shelfTiersProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('AnimeShelf'),
+      appBar: FusedAppBar(
+        titleSpacing: 12,
+        title: _SearchBar(onTap: () => context.push('/search')),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
@@ -49,10 +51,6 @@ class ShelfPage extends HookConsumerWidget {
           ),
         ),
         data: (tiers) => _ShelfContent(tiers: tiers),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/search'),
-        child: const Icon(Icons.search),
       ),
     );
   }
@@ -158,7 +156,7 @@ class _ShelfContent extends HookConsumerWidget {
     final sectionRadius = metrics?.sectionRadius ?? 16;
 
     return ReorderableListView.builder(
-      padding: const EdgeInsets.only(bottom: 80),
+      padding: const EdgeInsets.only(bottom: 16),
       buildDefaultDragHandles: false,
       itemCount: tiers.length,
       onReorder: (oldIndex, newIndex) =>
@@ -218,5 +216,48 @@ class _ShelfContent extends HookConsumerWidget {
         RankUtils.needsRecompression(actualPrev, actualNext)) {
       repo.recompressTierSorts();
     }
+  }
+}
+
+/// A pill-shaped, read-only search bar that navigates to the search page
+/// on tap.  Visually mimics a text field so users intuitively know they
+/// can search from here.
+class _SearchBar extends StatelessWidget {
+  const _SearchBar({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        height: 38,
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(24),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        child: Row(
+          children: [
+            Icon(
+              Icons.search,
+              size: 18,
+              color: colorScheme.onSurface.withValues(alpha: 0.5),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Search Bangumi...',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurface.withValues(alpha: 0.45),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

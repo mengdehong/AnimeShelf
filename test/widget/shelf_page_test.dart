@@ -169,13 +169,13 @@ void main() {
       await db.close();
     });
 
-    testWidgets('shows AppBar with title', (tester) async {
+    testWidgets('shows AppBar with search bar', (tester) async {
       final db = _createTestDb();
 
       await tester.pumpWidget(_testApp(child: const ShelfPage(), db: db));
       await tester.pumpAndSettle();
 
-      expect(find.text('AnimeShelf'), findsOneWidget);
+      expect(find.text('Search Bangumi...'), findsOneWidget);
 
       await db.close();
     });
@@ -192,13 +192,14 @@ void main() {
       await db.close();
     });
 
-    testWidgets('has FAB for searching anime', (tester) async {
+    testWidgets('has search bar that navigates to search page', (tester) async {
       final db = _createTestDb();
 
       await tester.pumpWidget(_testApp(child: const ShelfPage(), db: db));
       await tester.pumpAndSettle();
 
-      expect(find.byType(FloatingActionButton), findsOneWidget);
+      // The search bar is embedded in the AppBar (no FAB).
+      expect(find.text('Search Bangumi...'), findsOneWidget);
       expect(find.byIcon(Icons.search), findsOneWidget);
 
       await db.close();

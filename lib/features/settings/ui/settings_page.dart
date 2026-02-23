@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:anime_shelf/core/theme/app_theme.dart';
 import 'package:anime_shelf/core/theme/theme_notifier.dart';
+import 'package:anime_shelf/core/window/fused_app_bar.dart';
 import 'package:anime_shelf/core/window/window_settings_notifier.dart';
 import 'package:anime_shelf/features/settings/providers/settings_provider.dart';
 import 'package:file_picker/file_picker.dart';
@@ -19,7 +20,7 @@ class SettingsPage extends HookConsumerWidget {
     final hideTitleBar = ref.watch(windowSettingsNotifierProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: const FusedAppBar(title: Text('Settings')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

@@ -1,4 +1,5 @@
 import 'package:anime_shelf/core/theme/app_theme.dart';
+import 'package:anime_shelf/core/window/fused_app_bar.dart';
 import 'package:anime_shelf/features/search/data/bangumi_subject.dart';
 import 'package:anime_shelf/features/search/providers/search_provider.dart';
 import 'package:anime_shelf/features/search/ui/add_to_shelf_sheet.dart';
@@ -19,7 +20,8 @@ class SearchPage extends HookConsumerWidget {
     final resultsAsync = ref.watch(searchResultsProvider);
 
     return Scaffold(
-      appBar: AppBar(
+      appBar: FusedAppBar(
+        titleSpacing: 0,
         title: TextField(
           controller: controller,
           autofocus: true,
