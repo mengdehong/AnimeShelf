@@ -236,73 +236,78 @@ class TierSection extends HookConsumerWidget {
     }
   }
 
-  void _showEditDialog(BuildContext context, WidgetRef ref) {
+  Future<void> _showEditDialog(BuildContext context, WidgetRef ref) async {
     final nameController = TextEditingController(text: tier.name);
     final emojiController = TextEditingController(text: tier.emoji);
 
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          left: 24,
-          right: 24,
-          top: 24,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Edit Tier',
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-                if (!tier.isInbox)
-                  IconButton(
-                    icon: Icon(
-                      Icons.delete_outline,
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      _confirmDelete(context, ref);
-                    },
-                    tooltip: 'Delete Tier',
+    try {
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        builder: (context) => Padding(
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Edit Tier',
+                    style: Theme.of(context).textTheme.headlineMedium,
                   ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: 'Name'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: emojiController,
-              decoration: const InputDecoration(labelText: 'Emoji'),
-            ),
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: () {
-                ref
-                    .read(shelfRepositoryProvider)
-                    .updateTier(
-                      tierId: tier.id,
-                      name: nameController.text.trim(),
-                      emoji: emojiController.text.trim(),
-                    );
-                Navigator.of(context).pop();
-              },
-              child: const Text('Save'),
-            ),
-          ],
+                  if (!tier.isInbox)
+                    IconButton(
+                      icon: Icon(
+                        Icons.delete_outline,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        _confirmDelete(context, ref);
+                      },
+                      tooltip: 'Delete Tier',
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'Name'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: emojiController,
+                decoration: const InputDecoration(labelText: 'Emoji'),
+              ),
+              const SizedBox(height: 24),
+              FilledButton(
+                onPressed: () {
+                  ref
+                      .read(shelfRepositoryProvider)
+                      .updateTier(
+                        tierId: tier.id,
+                        name: nameController.text.trim(),
+                        emoji: emojiController.text.trim(),
+                      );
+                  Navigator.of(context).pop();
+                },
+                child: const Text('Save'),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    } finally {
+      nameController.dispose();
+      emojiController.dispose();
+    }
   }
 
   void _confirmDelete(BuildContext context, WidgetRef ref) {

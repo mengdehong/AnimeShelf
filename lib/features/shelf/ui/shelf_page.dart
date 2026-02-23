@@ -115,89 +115,97 @@ class ShelfPage extends HookConsumerWidget {
     return buildPlainTextImportReportText(report);
   }
 
-  void _showAddTierDialog(BuildContext context, WidgetRef ref) {
+  Future<void> _showAddTierDialog(BuildContext context, WidgetRef ref) async {
     final nameController = TextEditingController();
     final emojiController = TextEditingController();
     var selectedColor = 0xFF2196F3;
 
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      sheetAnimationStyle: _addTierSheetAnimationStyle,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          left: 24,
-          right: 24,
-          top: 24,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('New Tier', style: Theme.of(context).textTheme.headlineMedium),
-            const SizedBox(height: 16),
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(
-                labelText: 'Name',
-                hintText: 'e.g. SSS, SS, S, A...',
+    try {
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        sheetAnimationStyle: _addTierSheetAnimationStyle,
+        builder: (context) => Padding(
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 24,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'New Tier',
+                style: Theme.of(context).textTheme.headlineMedium,
               ),
-              autofocus: true,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: emojiController,
-              decoration: const InputDecoration(
-                labelText: 'Emoji (optional)',
-                hintText: 'e.g. \u{1F451}',
+              const SizedBox(height: 16),
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Name',
+                  hintText: 'e.g. SSS, SS, S, A...',
+                ),
+                autofocus: true,
               ),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              children:
-                  [
-                    0xFFFFD700,
-                    0xFFFF6B6B,
-                    0xFF4ECDC4,
-                    0xFF45B7D1,
-                    0xFFFFA07A,
-                    0xFF98D8C8,
-                    0xFFB19CD9,
-                    0xFFFF69B4,
-                  ].map((color) {
-                    return GestureDetector(
-                      onTap: () => selectedColor = color,
-                      child: CircleAvatar(
-                        radius: 18,
-                        backgroundColor: Color(color),
-                      ),
-                    );
-                  }).toList(),
-            ),
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: () {
-                final name = nameController.text.trim();
-                if (name.isEmpty) {
-                  return;
-                }
-                ref
-                    .read(shelfRepositoryProvider)
-                    .addTier(
-                      name: name,
-                      emoji: emojiController.text.trim(),
-                      colorValue: selectedColor,
-                    );
-                Navigator.of(context).pop();
-              },
-              child: const Text('Add Tier'),
-            ),
-          ],
+              const SizedBox(height: 12),
+              TextField(
+                controller: emojiController,
+                decoration: const InputDecoration(
+                  labelText: 'Emoji (optional)',
+                  hintText: 'e.g. \u{1F451}',
+                ),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                children:
+                    [
+                      0xFFFFD700,
+                      0xFFFF6B6B,
+                      0xFF4ECDC4,
+                      0xFF45B7D1,
+                      0xFFFFA07A,
+                      0xFF98D8C8,
+                      0xFFB19CD9,
+                      0xFFFF69B4,
+                    ].map((color) {
+                      return GestureDetector(
+                        onTap: () => selectedColor = color,
+                        child: CircleAvatar(
+                          radius: 18,
+                          backgroundColor: Color(color),
+                        ),
+                      );
+                    }).toList(),
+              ),
+              const SizedBox(height: 24),
+              FilledButton(
+                onPressed: () {
+                  final name = nameController.text.trim();
+                  if (name.isEmpty) {
+                    return;
+                  }
+                  ref
+                      .read(shelfRepositoryProvider)
+                      .addTier(
+                        name: name,
+                        emoji: emojiController.text.trim(),
+                        colorValue: selectedColor,
+                      );
+                  Navigator.of(context).pop();
+                },
+                child: const Text('Add Tier'),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    } finally {
+      nameController.dispose();
+      emojiController.dispose();
+    }
   }
 }
 

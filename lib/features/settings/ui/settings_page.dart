@@ -242,33 +242,11 @@ class SettingsPage extends HookConsumerWidget {
     WidgetRef ref,
     String currentName,
   ) async {
-    final controller = TextEditingController(text: currentName);
     final newName = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('App display name'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Name',
-            hintText: 'AnimeShelf',
-          ),
-          onSubmitted: (value) => Navigator.of(context).pop(value.trim()),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(null),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
+      builder: (context) => _RenameAppDialog(initialName: currentName),
     );
-    controller.dispose();
+
     if (newName != null && newName.isNotEmpty && newName != currentName) {
       await ref.read(appNameNotifierProvider.notifier).setName(newName);
     }
@@ -458,43 +436,10 @@ class SettingsPage extends HookConsumerWidget {
   }
 
   Future<String?> _showPlainTextInputDialog(BuildContext context) async {
-    final controller = TextEditingController();
-
-    final text = await showDialog<String>(
+    return showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Paste Plain Text List'),
-        content: SizedBox(
-          width: 560,
-          child: TextField(
-            controller: controller,
-            autofocus: true,
-            minLines: 12,
-            maxLines: 20,
-            keyboardType: TextInputType.multiline,
-            textInputAction: TextInputAction.newline,
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              alignLabelWithHint: true,
-              hintText: 'S\nClannad\n\nA\n欢迎加入NHK',
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(null),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text),
-            child: const Text('Import'),
-          ),
-        ],
-      ),
+      builder: (context) => const _PlainTextInputDialog(),
     );
-
-    controller.dispose();
-    return text;
   }
 
   Future<void> _confirmClearAllEntries(
@@ -630,6 +575,113 @@ class SettingsPage extends HookConsumerWidget {
         ).showSnackBar(SnackBar(content: Text('Failed to clear images: $e')));
       }
     }
+  }
+}
+
+class _RenameAppDialog extends StatefulWidget {
+  final String initialName;
+
+  const _RenameAppDialog({required this.initialName});
+
+  @override
+  State<_RenameAppDialog> createState() => _RenameAppDialogState();
+}
+
+class _RenameAppDialogState extends State<_RenameAppDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialName);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('App display name'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        decoration: const InputDecoration(
+          labelText: 'Name',
+          hintText: 'AnimeShelf',
+        ),
+        onSubmitted: (value) => Navigator.of(context).pop(value.trim()),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(null),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+}
+
+class _PlainTextInputDialog extends StatefulWidget {
+  const _PlainTextInputDialog();
+
+  @override
+  State<_PlainTextInputDialog> createState() => _PlainTextInputDialogState();
+}
+
+class _PlainTextInputDialogState extends State<_PlainTextInputDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Paste Plain Text List'),
+      content: SizedBox(
+        width: 560,
+        child: TextField(
+          controller: _controller,
+          autofocus: true,
+          minLines: 12,
+          maxLines: 20,
+          keyboardType: TextInputType.multiline,
+          textInputAction: TextInputAction.newline,
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+            alignLabelWithHint: true,
+            hintText: 'S\nClannad\n\nA\n欢迎加入NHK',
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(null),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_controller.text),
+          child: const Text('Import'),
+        ),
+      ],
+    );
   }
 }
 
