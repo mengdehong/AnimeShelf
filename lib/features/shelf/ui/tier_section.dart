@@ -13,6 +13,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 /// The section itself is a [DragTarget] for entries being dragged
 /// across tiers. The header shows tier name, emoji, color, and actions.
 class TierSection extends HookConsumerWidget {
+  static const _entrySpacing = 10.0;
+
   final int index;
   final Tier tier;
   final List<EntryWithSubject> entries;
@@ -121,22 +123,26 @@ class TierSection extends HookConsumerWidget {
                 )
               else
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                  child: Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: entries.asMap().entries.map((e) {
-                      final index = e.key;
-                      final entryData = e.value;
-                      return _buildDraggableEntry(
-                        context,
-                        ref,
-                        entryData,
-                        index,
-                        entries,
-                        posterRadius,
-                      );
-                    }).toList(),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: _entrySpacing,
+                      runSpacing: _entrySpacing,
+                      children: entries.asMap().entries.map((e) {
+                        final index = e.key;
+                        final entryData = e.value;
+                        return _buildDraggableEntry(
+                          context,
+                          ref,
+                          entryData,
+                          index,
+                          entries,
+                          posterRadius,
+                        );
+                      }).toList(),
+                    ),
                   ),
                 ),
             ],
@@ -383,6 +389,9 @@ class _TierHeader extends StatelessWidget {
 }
 
 class _EntryCardBox extends StatelessWidget {
+  static const cardWidth = 110.0;
+  static const cardHeight = 160.0;
+
   const _EntryCardBox({required this.entryData, required this.onTap});
 
   final EntryWithSubject entryData;
@@ -391,8 +400,8 @@ class _EntryCardBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 110,
-      height: 160,
+      width: cardWidth,
+      height: cardHeight,
       child: RepaintBoundary(
         child: EntryCard(entryData: entryData, onTap: onTap),
       ),
