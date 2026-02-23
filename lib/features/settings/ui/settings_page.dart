@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:anime_shelf/core/app_name_notifier.dart';
 import 'package:anime_shelf/core/theme/app_theme.dart';
 import 'package:anime_shelf/core/theme/theme_notifier.dart';
 import 'package:anime_shelf/core/window/fused_app_bar.dart';
@@ -18,6 +19,7 @@ class SettingsPage extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeIndex = ref.watch(themeNotifierProvider);
     final hideTitleBar = ref.watch(windowSettingsNotifierProvider);
+    final appName = ref.watch(appNameNotifierProvider);
 
     return Scaffold(
       appBar: const FusedAppBar(title: Text('Settings')),
@@ -70,6 +72,13 @@ class SettingsPage extends HookConsumerWidget {
                 }
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.label_outline),
+              title: const Text('App display name'),
+              subtitle: Text(appName),
+              trailing: const Icon(Icons.edit_outlined),
+              onTap: () => _showRenameDialog(context, ref, appName),
+            ),
             const Divider(height: 32),
           ],
 
@@ -109,6 +118,43 @@ class SettingsPage extends HookConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _showRenameDialog(
+    BuildContext context,
+    WidgetRef ref,
+    String currentName,
+  ) async {
+    final controller = TextEditingController(text: currentName);
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('App display name'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Name',
+            hintText: 'AnimeShelf',
+          ),
+          onSubmitted: (value) => Navigator.of(context).pop(value.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(null),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (newName != null && newName.isNotEmpty && newName != currentName) {
+      await ref.read(appNameNotifierProvider.notifier).setName(newName);
+    }
   }
 
   Future<void> _export(

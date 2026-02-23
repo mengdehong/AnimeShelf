@@ -20,6 +20,7 @@ class ShelfPage extends HookConsumerWidget {
 
     return Scaffold(
       appBar: FusedAppBar(
+        showAppName: true,
         titleSpacing: 12,
         title: _SearchBar(onTap: () => context.push('/search')),
         actions: [
