@@ -81,7 +81,6 @@ class _DetailsContent extends HookConsumerWidget {
     final airDate = subject?.airDate ?? '';
     final rating = subject?.rating ?? 0.0;
     final summary = subject?.summary ?? '';
-    final eps = subject?.eps ?? 0;
     final globalRank = subject?.globalRank ?? 0;
     final tags = subject?.tags ?? '';
     final director = subject?.director ?? '';
@@ -195,7 +194,6 @@ class _DetailsContent extends HookConsumerWidget {
                   rating: rating,
                   globalRank: globalRank,
                   airDate: airDate,
-                  eps: eps,
                   createdAt: entry.createdAt,
                 ),
 
@@ -251,14 +249,13 @@ class _DetailsContent extends HookConsumerWidget {
     );
   }
 
-  /// Single row of all metadata chips: tier, rating, rank, air date, eps, createdAt.
+  /// Single row of all metadata chips: tier, rating, rank, air date, createdAt.
   Widget _buildChipsRow(
     BuildContext context,
     WidgetRef ref, {
     required double rating,
     required int globalRank,
     required String airDate,
-    required int eps,
     required DateTime createdAt,
   }) {
     return Wrap(
@@ -299,12 +296,6 @@ class _DetailsContent extends HookConsumerWidget {
           Chip(
             avatar: const Icon(Icons.calendar_today, size: 16),
             label: Text(airDate),
-          ),
-        // Episode count
-        if (eps > 0)
-          Chip(
-            avatar: const Icon(Icons.movie_outlined, size: 16),
-            label: Text('$eps eps'),
           ),
         // Added to shelf date
         Chip(
