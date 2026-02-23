@@ -497,6 +497,42 @@ class $SubjectsTable extends Subjects with TableInfo<$SubjectsTable, Subject> {
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
+  static const VerificationMeta _largePosterUrlMeta = const VerificationMeta(
+    'largePosterUrl',
+  );
+  @override
+  late final GeneratedColumn<String> largePosterUrl = GeneratedColumn<String>(
+    'large_poster_url',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _localThumbnailPathMeta =
+      const VerificationMeta('localThumbnailPath');
+  @override
+  late final GeneratedColumn<String> localThumbnailPath =
+      GeneratedColumn<String>(
+        'local_thumbnail_path',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(''),
+      );
+  static const VerificationMeta _localLargeImagePathMeta =
+      const VerificationMeta('localLargeImagePath');
+  @override
+  late final GeneratedColumn<String> localLargeImagePath =
+      GeneratedColumn<String>(
+        'local_large_image_path',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant(''),
+      );
   static const VerificationMeta _airDateMeta = const VerificationMeta(
     'airDate',
   );
@@ -541,6 +577,50 @@ class $SubjectsTable extends Subjects with TableInfo<$SubjectsTable, Subject> {
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
+  static const VerificationMeta _tagsMeta = const VerificationMeta('tags');
+  @override
+  late final GeneratedColumn<String> tags = GeneratedColumn<String>(
+    'tags',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _directorMeta = const VerificationMeta(
+    'director',
+  );
+  @override
+  late final GeneratedColumn<String> director = GeneratedColumn<String>(
+    'director',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _studioMeta = const VerificationMeta('studio');
+  @override
+  late final GeneratedColumn<String> studio = GeneratedColumn<String>(
+    'studio',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _globalRankMeta = const VerificationMeta(
+    'globalRank',
+  );
+  @override
+  late final GeneratedColumn<int> globalRank = GeneratedColumn<int>(
+    'global_rank',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _lastFetchedAtMeta = const VerificationMeta(
     'lastFetchedAt',
   );
@@ -560,10 +640,17 @@ class $SubjectsTable extends Subjects with TableInfo<$SubjectsTable, Subject> {
     nameCn,
     nameJp,
     posterUrl,
+    largePosterUrl,
+    localThumbnailPath,
+    localLargeImagePath,
     airDate,
     eps,
     rating,
     summary,
+    tags,
+    director,
+    studio,
+    globalRank,
     lastFetchedAt,
   ];
   @override
@@ -602,6 +689,33 @@ class $SubjectsTable extends Subjects with TableInfo<$SubjectsTable, Subject> {
         posterUrl.isAcceptableOrUnknown(data['poster_url']!, _posterUrlMeta),
       );
     }
+    if (data.containsKey('large_poster_url')) {
+      context.handle(
+        _largePosterUrlMeta,
+        largePosterUrl.isAcceptableOrUnknown(
+          data['large_poster_url']!,
+          _largePosterUrlMeta,
+        ),
+      );
+    }
+    if (data.containsKey('local_thumbnail_path')) {
+      context.handle(
+        _localThumbnailPathMeta,
+        localThumbnailPath.isAcceptableOrUnknown(
+          data['local_thumbnail_path']!,
+          _localThumbnailPathMeta,
+        ),
+      );
+    }
+    if (data.containsKey('local_large_image_path')) {
+      context.handle(
+        _localLargeImagePathMeta,
+        localLargeImagePath.isAcceptableOrUnknown(
+          data['local_large_image_path']!,
+          _localLargeImagePathMeta,
+        ),
+      );
+    }
     if (data.containsKey('air_date')) {
       context.handle(
         _airDateMeta,
@@ -624,6 +738,30 @@ class $SubjectsTable extends Subjects with TableInfo<$SubjectsTable, Subject> {
       context.handle(
         _summaryMeta,
         summary.isAcceptableOrUnknown(data['summary']!, _summaryMeta),
+      );
+    }
+    if (data.containsKey('tags')) {
+      context.handle(
+        _tagsMeta,
+        tags.isAcceptableOrUnknown(data['tags']!, _tagsMeta),
+      );
+    }
+    if (data.containsKey('director')) {
+      context.handle(
+        _directorMeta,
+        director.isAcceptableOrUnknown(data['director']!, _directorMeta),
+      );
+    }
+    if (data.containsKey('studio')) {
+      context.handle(
+        _studioMeta,
+        studio.isAcceptableOrUnknown(data['studio']!, _studioMeta),
+      );
+    }
+    if (data.containsKey('global_rank')) {
+      context.handle(
+        _globalRankMeta,
+        globalRank.isAcceptableOrUnknown(data['global_rank']!, _globalRankMeta),
       );
     }
     if (data.containsKey('last_fetched_at')) {
@@ -660,6 +798,18 @@ class $SubjectsTable extends Subjects with TableInfo<$SubjectsTable, Subject> {
         DriftSqlType.string,
         data['${effectivePrefix}poster_url'],
       )!,
+      largePosterUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}large_poster_url'],
+      )!,
+      localThumbnailPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}local_thumbnail_path'],
+      )!,
+      localLargeImagePath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}local_large_image_path'],
+      )!,
       airDate: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}air_date'],
@@ -675,6 +825,22 @@ class $SubjectsTable extends Subjects with TableInfo<$SubjectsTable, Subject> {
       summary: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}summary'],
+      )!,
+      tags: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tags'],
+      )!,
+      director: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}director'],
+      )!,
+      studio: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}studio'],
+      )!,
+      globalRank: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}global_rank'],
       )!,
       lastFetchedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
@@ -694,20 +860,34 @@ class Subject extends DataClass implements Insertable<Subject> {
   final String nameCn;
   final String nameJp;
   final String posterUrl;
+  final String largePosterUrl;
+  final String localThumbnailPath;
+  final String localLargeImagePath;
   final String airDate;
   final int eps;
   final double rating;
   final String summary;
+  final String tags;
+  final String director;
+  final String studio;
+  final int globalRank;
   final DateTime lastFetchedAt;
   const Subject({
     required this.subjectId,
     required this.nameCn,
     required this.nameJp,
     required this.posterUrl,
+    required this.largePosterUrl,
+    required this.localThumbnailPath,
+    required this.localLargeImagePath,
     required this.airDate,
     required this.eps,
     required this.rating,
     required this.summary,
+    required this.tags,
+    required this.director,
+    required this.studio,
+    required this.globalRank,
     required this.lastFetchedAt,
   });
   @override
@@ -717,10 +897,17 @@ class Subject extends DataClass implements Insertable<Subject> {
     map['name_cn'] = Variable<String>(nameCn);
     map['name_jp'] = Variable<String>(nameJp);
     map['poster_url'] = Variable<String>(posterUrl);
+    map['large_poster_url'] = Variable<String>(largePosterUrl);
+    map['local_thumbnail_path'] = Variable<String>(localThumbnailPath);
+    map['local_large_image_path'] = Variable<String>(localLargeImagePath);
     map['air_date'] = Variable<String>(airDate);
     map['eps'] = Variable<int>(eps);
     map['rating'] = Variable<double>(rating);
     map['summary'] = Variable<String>(summary);
+    map['tags'] = Variable<String>(tags);
+    map['director'] = Variable<String>(director);
+    map['studio'] = Variable<String>(studio);
+    map['global_rank'] = Variable<int>(globalRank);
     map['last_fetched_at'] = Variable<DateTime>(lastFetchedAt);
     return map;
   }
@@ -731,10 +918,17 @@ class Subject extends DataClass implements Insertable<Subject> {
       nameCn: Value(nameCn),
       nameJp: Value(nameJp),
       posterUrl: Value(posterUrl),
+      largePosterUrl: Value(largePosterUrl),
+      localThumbnailPath: Value(localThumbnailPath),
+      localLargeImagePath: Value(localLargeImagePath),
       airDate: Value(airDate),
       eps: Value(eps),
       rating: Value(rating),
       summary: Value(summary),
+      tags: Value(tags),
+      director: Value(director),
+      studio: Value(studio),
+      globalRank: Value(globalRank),
       lastFetchedAt: Value(lastFetchedAt),
     );
   }
@@ -749,10 +943,21 @@ class Subject extends DataClass implements Insertable<Subject> {
       nameCn: serializer.fromJson<String>(json['nameCn']),
       nameJp: serializer.fromJson<String>(json['nameJp']),
       posterUrl: serializer.fromJson<String>(json['posterUrl']),
+      largePosterUrl: serializer.fromJson<String>(json['largePosterUrl']),
+      localThumbnailPath: serializer.fromJson<String>(
+        json['localThumbnailPath'],
+      ),
+      localLargeImagePath: serializer.fromJson<String>(
+        json['localLargeImagePath'],
+      ),
       airDate: serializer.fromJson<String>(json['airDate']),
       eps: serializer.fromJson<int>(json['eps']),
       rating: serializer.fromJson<double>(json['rating']),
       summary: serializer.fromJson<String>(json['summary']),
+      tags: serializer.fromJson<String>(json['tags']),
+      director: serializer.fromJson<String>(json['director']),
+      studio: serializer.fromJson<String>(json['studio']),
+      globalRank: serializer.fromJson<int>(json['globalRank']),
       lastFetchedAt: serializer.fromJson<DateTime>(json['lastFetchedAt']),
     );
   }
@@ -764,10 +969,17 @@ class Subject extends DataClass implements Insertable<Subject> {
       'nameCn': serializer.toJson<String>(nameCn),
       'nameJp': serializer.toJson<String>(nameJp),
       'posterUrl': serializer.toJson<String>(posterUrl),
+      'largePosterUrl': serializer.toJson<String>(largePosterUrl),
+      'localThumbnailPath': serializer.toJson<String>(localThumbnailPath),
+      'localLargeImagePath': serializer.toJson<String>(localLargeImagePath),
       'airDate': serializer.toJson<String>(airDate),
       'eps': serializer.toJson<int>(eps),
       'rating': serializer.toJson<double>(rating),
       'summary': serializer.toJson<String>(summary),
+      'tags': serializer.toJson<String>(tags),
+      'director': serializer.toJson<String>(director),
+      'studio': serializer.toJson<String>(studio),
+      'globalRank': serializer.toJson<int>(globalRank),
       'lastFetchedAt': serializer.toJson<DateTime>(lastFetchedAt),
     };
   }
@@ -777,20 +989,34 @@ class Subject extends DataClass implements Insertable<Subject> {
     String? nameCn,
     String? nameJp,
     String? posterUrl,
+    String? largePosterUrl,
+    String? localThumbnailPath,
+    String? localLargeImagePath,
     String? airDate,
     int? eps,
     double? rating,
     String? summary,
+    String? tags,
+    String? director,
+    String? studio,
+    int? globalRank,
     DateTime? lastFetchedAt,
   }) => Subject(
     subjectId: subjectId ?? this.subjectId,
     nameCn: nameCn ?? this.nameCn,
     nameJp: nameJp ?? this.nameJp,
     posterUrl: posterUrl ?? this.posterUrl,
+    largePosterUrl: largePosterUrl ?? this.largePosterUrl,
+    localThumbnailPath: localThumbnailPath ?? this.localThumbnailPath,
+    localLargeImagePath: localLargeImagePath ?? this.localLargeImagePath,
     airDate: airDate ?? this.airDate,
     eps: eps ?? this.eps,
     rating: rating ?? this.rating,
     summary: summary ?? this.summary,
+    tags: tags ?? this.tags,
+    director: director ?? this.director,
+    studio: studio ?? this.studio,
+    globalRank: globalRank ?? this.globalRank,
     lastFetchedAt: lastFetchedAt ?? this.lastFetchedAt,
   );
   Subject copyWithCompanion(SubjectsCompanion data) {
@@ -799,10 +1025,25 @@ class Subject extends DataClass implements Insertable<Subject> {
       nameCn: data.nameCn.present ? data.nameCn.value : this.nameCn,
       nameJp: data.nameJp.present ? data.nameJp.value : this.nameJp,
       posterUrl: data.posterUrl.present ? data.posterUrl.value : this.posterUrl,
+      largePosterUrl: data.largePosterUrl.present
+          ? data.largePosterUrl.value
+          : this.largePosterUrl,
+      localThumbnailPath: data.localThumbnailPath.present
+          ? data.localThumbnailPath.value
+          : this.localThumbnailPath,
+      localLargeImagePath: data.localLargeImagePath.present
+          ? data.localLargeImagePath.value
+          : this.localLargeImagePath,
       airDate: data.airDate.present ? data.airDate.value : this.airDate,
       eps: data.eps.present ? data.eps.value : this.eps,
       rating: data.rating.present ? data.rating.value : this.rating,
       summary: data.summary.present ? data.summary.value : this.summary,
+      tags: data.tags.present ? data.tags.value : this.tags,
+      director: data.director.present ? data.director.value : this.director,
+      studio: data.studio.present ? data.studio.value : this.studio,
+      globalRank: data.globalRank.present
+          ? data.globalRank.value
+          : this.globalRank,
       lastFetchedAt: data.lastFetchedAt.present
           ? data.lastFetchedAt.value
           : this.lastFetchedAt,
@@ -816,10 +1057,17 @@ class Subject extends DataClass implements Insertable<Subject> {
           ..write('nameCn: $nameCn, ')
           ..write('nameJp: $nameJp, ')
           ..write('posterUrl: $posterUrl, ')
+          ..write('largePosterUrl: $largePosterUrl, ')
+          ..write('localThumbnailPath: $localThumbnailPath, ')
+          ..write('localLargeImagePath: $localLargeImagePath, ')
           ..write('airDate: $airDate, ')
           ..write('eps: $eps, ')
           ..write('rating: $rating, ')
           ..write('summary: $summary, ')
+          ..write('tags: $tags, ')
+          ..write('director: $director, ')
+          ..write('studio: $studio, ')
+          ..write('globalRank: $globalRank, ')
           ..write('lastFetchedAt: $lastFetchedAt')
           ..write(')'))
         .toString();
@@ -831,10 +1079,17 @@ class Subject extends DataClass implements Insertable<Subject> {
     nameCn,
     nameJp,
     posterUrl,
+    largePosterUrl,
+    localThumbnailPath,
+    localLargeImagePath,
     airDate,
     eps,
     rating,
     summary,
+    tags,
+    director,
+    studio,
+    globalRank,
     lastFetchedAt,
   );
   @override
@@ -845,10 +1100,17 @@ class Subject extends DataClass implements Insertable<Subject> {
           other.nameCn == this.nameCn &&
           other.nameJp == this.nameJp &&
           other.posterUrl == this.posterUrl &&
+          other.largePosterUrl == this.largePosterUrl &&
+          other.localThumbnailPath == this.localThumbnailPath &&
+          other.localLargeImagePath == this.localLargeImagePath &&
           other.airDate == this.airDate &&
           other.eps == this.eps &&
           other.rating == this.rating &&
           other.summary == this.summary &&
+          other.tags == this.tags &&
+          other.director == this.director &&
+          other.studio == this.studio &&
+          other.globalRank == this.globalRank &&
           other.lastFetchedAt == this.lastFetchedAt);
 }
 
@@ -857,20 +1119,34 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
   final Value<String> nameCn;
   final Value<String> nameJp;
   final Value<String> posterUrl;
+  final Value<String> largePosterUrl;
+  final Value<String> localThumbnailPath;
+  final Value<String> localLargeImagePath;
   final Value<String> airDate;
   final Value<int> eps;
   final Value<double> rating;
   final Value<String> summary;
+  final Value<String> tags;
+  final Value<String> director;
+  final Value<String> studio;
+  final Value<int> globalRank;
   final Value<DateTime> lastFetchedAt;
   const SubjectsCompanion({
     this.subjectId = const Value.absent(),
     this.nameCn = const Value.absent(),
     this.nameJp = const Value.absent(),
     this.posterUrl = const Value.absent(),
+    this.largePosterUrl = const Value.absent(),
+    this.localThumbnailPath = const Value.absent(),
+    this.localLargeImagePath = const Value.absent(),
     this.airDate = const Value.absent(),
     this.eps = const Value.absent(),
     this.rating = const Value.absent(),
     this.summary = const Value.absent(),
+    this.tags = const Value.absent(),
+    this.director = const Value.absent(),
+    this.studio = const Value.absent(),
+    this.globalRank = const Value.absent(),
     this.lastFetchedAt = const Value.absent(),
   });
   SubjectsCompanion.insert({
@@ -878,10 +1154,17 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
     this.nameCn = const Value.absent(),
     this.nameJp = const Value.absent(),
     this.posterUrl = const Value.absent(),
+    this.largePosterUrl = const Value.absent(),
+    this.localThumbnailPath = const Value.absent(),
+    this.localLargeImagePath = const Value.absent(),
     this.airDate = const Value.absent(),
     this.eps = const Value.absent(),
     this.rating = const Value.absent(),
     this.summary = const Value.absent(),
+    this.tags = const Value.absent(),
+    this.director = const Value.absent(),
+    this.studio = const Value.absent(),
+    this.globalRank = const Value.absent(),
     this.lastFetchedAt = const Value.absent(),
   });
   static Insertable<Subject> custom({
@@ -889,10 +1172,17 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
     Expression<String>? nameCn,
     Expression<String>? nameJp,
     Expression<String>? posterUrl,
+    Expression<String>? largePosterUrl,
+    Expression<String>? localThumbnailPath,
+    Expression<String>? localLargeImagePath,
     Expression<String>? airDate,
     Expression<int>? eps,
     Expression<double>? rating,
     Expression<String>? summary,
+    Expression<String>? tags,
+    Expression<String>? director,
+    Expression<String>? studio,
+    Expression<int>? globalRank,
     Expression<DateTime>? lastFetchedAt,
   }) {
     return RawValuesInsertable({
@@ -900,10 +1190,19 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
       if (nameCn != null) 'name_cn': nameCn,
       if (nameJp != null) 'name_jp': nameJp,
       if (posterUrl != null) 'poster_url': posterUrl,
+      if (largePosterUrl != null) 'large_poster_url': largePosterUrl,
+      if (localThumbnailPath != null)
+        'local_thumbnail_path': localThumbnailPath,
+      if (localLargeImagePath != null)
+        'local_large_image_path': localLargeImagePath,
       if (airDate != null) 'air_date': airDate,
       if (eps != null) 'eps': eps,
       if (rating != null) 'rating': rating,
       if (summary != null) 'summary': summary,
+      if (tags != null) 'tags': tags,
+      if (director != null) 'director': director,
+      if (studio != null) 'studio': studio,
+      if (globalRank != null) 'global_rank': globalRank,
       if (lastFetchedAt != null) 'last_fetched_at': lastFetchedAt,
     });
   }
@@ -913,10 +1212,17 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
     Value<String>? nameCn,
     Value<String>? nameJp,
     Value<String>? posterUrl,
+    Value<String>? largePosterUrl,
+    Value<String>? localThumbnailPath,
+    Value<String>? localLargeImagePath,
     Value<String>? airDate,
     Value<int>? eps,
     Value<double>? rating,
     Value<String>? summary,
+    Value<String>? tags,
+    Value<String>? director,
+    Value<String>? studio,
+    Value<int>? globalRank,
     Value<DateTime>? lastFetchedAt,
   }) {
     return SubjectsCompanion(
@@ -924,10 +1230,17 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
       nameCn: nameCn ?? this.nameCn,
       nameJp: nameJp ?? this.nameJp,
       posterUrl: posterUrl ?? this.posterUrl,
+      largePosterUrl: largePosterUrl ?? this.largePosterUrl,
+      localThumbnailPath: localThumbnailPath ?? this.localThumbnailPath,
+      localLargeImagePath: localLargeImagePath ?? this.localLargeImagePath,
       airDate: airDate ?? this.airDate,
       eps: eps ?? this.eps,
       rating: rating ?? this.rating,
       summary: summary ?? this.summary,
+      tags: tags ?? this.tags,
+      director: director ?? this.director,
+      studio: studio ?? this.studio,
+      globalRank: globalRank ?? this.globalRank,
       lastFetchedAt: lastFetchedAt ?? this.lastFetchedAt,
     );
   }
@@ -947,6 +1260,17 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
     if (posterUrl.present) {
       map['poster_url'] = Variable<String>(posterUrl.value);
     }
+    if (largePosterUrl.present) {
+      map['large_poster_url'] = Variable<String>(largePosterUrl.value);
+    }
+    if (localThumbnailPath.present) {
+      map['local_thumbnail_path'] = Variable<String>(localThumbnailPath.value);
+    }
+    if (localLargeImagePath.present) {
+      map['local_large_image_path'] = Variable<String>(
+        localLargeImagePath.value,
+      );
+    }
     if (airDate.present) {
       map['air_date'] = Variable<String>(airDate.value);
     }
@@ -958,6 +1282,18 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
     }
     if (summary.present) {
       map['summary'] = Variable<String>(summary.value);
+    }
+    if (tags.present) {
+      map['tags'] = Variable<String>(tags.value);
+    }
+    if (director.present) {
+      map['director'] = Variable<String>(director.value);
+    }
+    if (studio.present) {
+      map['studio'] = Variable<String>(studio.value);
+    }
+    if (globalRank.present) {
+      map['global_rank'] = Variable<int>(globalRank.value);
     }
     if (lastFetchedAt.present) {
       map['last_fetched_at'] = Variable<DateTime>(lastFetchedAt.value);
@@ -972,10 +1308,17 @@ class SubjectsCompanion extends UpdateCompanion<Subject> {
           ..write('nameCn: $nameCn, ')
           ..write('nameJp: $nameJp, ')
           ..write('posterUrl: $posterUrl, ')
+          ..write('largePosterUrl: $largePosterUrl, ')
+          ..write('localThumbnailPath: $localThumbnailPath, ')
+          ..write('localLargeImagePath: $localLargeImagePath, ')
           ..write('airDate: $airDate, ')
           ..write('eps: $eps, ')
           ..write('rating: $rating, ')
           ..write('summary: $summary, ')
+          ..write('tags: $tags, ')
+          ..write('director: $director, ')
+          ..write('studio: $studio, ')
+          ..write('globalRank: $globalRank, ')
           ..write('lastFetchedAt: $lastFetchedAt')
           ..write(')'))
         .toString();
@@ -2010,10 +2353,17 @@ typedef $$SubjectsTableCreateCompanionBuilder =
       Value<String> nameCn,
       Value<String> nameJp,
       Value<String> posterUrl,
+      Value<String> largePosterUrl,
+      Value<String> localThumbnailPath,
+      Value<String> localLargeImagePath,
       Value<String> airDate,
       Value<int> eps,
       Value<double> rating,
       Value<String> summary,
+      Value<String> tags,
+      Value<String> director,
+      Value<String> studio,
+      Value<int> globalRank,
       Value<DateTime> lastFetchedAt,
     });
 typedef $$SubjectsTableUpdateCompanionBuilder =
@@ -2022,10 +2372,17 @@ typedef $$SubjectsTableUpdateCompanionBuilder =
       Value<String> nameCn,
       Value<String> nameJp,
       Value<String> posterUrl,
+      Value<String> largePosterUrl,
+      Value<String> localThumbnailPath,
+      Value<String> localLargeImagePath,
       Value<String> airDate,
       Value<int> eps,
       Value<double> rating,
       Value<String> summary,
+      Value<String> tags,
+      Value<String> director,
+      Value<String> studio,
+      Value<int> globalRank,
       Value<DateTime> lastFetchedAt,
     });
 
@@ -2108,6 +2465,21 @@ class $$SubjectsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get largePosterUrl => $composableBuilder(
+    column: $table.largePosterUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get localThumbnailPath => $composableBuilder(
+    column: $table.localThumbnailPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get localLargeImagePath => $composableBuilder(
+    column: $table.localLargeImagePath,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get airDate => $composableBuilder(
     column: $table.airDate,
     builder: (column) => ColumnFilters(column),
@@ -2125,6 +2497,26 @@ class $$SubjectsTableFilterComposer
 
   ColumnFilters<String> get summary => $composableBuilder(
     column: $table.summary,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tags => $composableBuilder(
+    column: $table.tags,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get director => $composableBuilder(
+    column: $table.director,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get studio => $composableBuilder(
+    column: $table.studio,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get globalRank => $composableBuilder(
+    column: $table.globalRank,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2213,6 +2605,21 @@ class $$SubjectsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get largePosterUrl => $composableBuilder(
+    column: $table.largePosterUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get localThumbnailPath => $composableBuilder(
+    column: $table.localThumbnailPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get localLargeImagePath => $composableBuilder(
+    column: $table.localLargeImagePath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get airDate => $composableBuilder(
     column: $table.airDate,
     builder: (column) => ColumnOrderings(column),
@@ -2230,6 +2637,26 @@ class $$SubjectsTableOrderingComposer
 
   ColumnOrderings<String> get summary => $composableBuilder(
     column: $table.summary,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get tags => $composableBuilder(
+    column: $table.tags,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get director => $composableBuilder(
+    column: $table.director,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get studio => $composableBuilder(
+    column: $table.studio,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get globalRank => $composableBuilder(
+    column: $table.globalRank,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -2260,6 +2687,21 @@ class $$SubjectsTableAnnotationComposer
   GeneratedColumn<String> get posterUrl =>
       $composableBuilder(column: $table.posterUrl, builder: (column) => column);
 
+  GeneratedColumn<String> get largePosterUrl => $composableBuilder(
+    column: $table.largePosterUrl,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get localThumbnailPath => $composableBuilder(
+    column: $table.localThumbnailPath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get localLargeImagePath => $composableBuilder(
+    column: $table.localLargeImagePath,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get airDate =>
       $composableBuilder(column: $table.airDate, builder: (column) => column);
 
@@ -2271,6 +2713,20 @@ class $$SubjectsTableAnnotationComposer
 
   GeneratedColumn<String> get summary =>
       $composableBuilder(column: $table.summary, builder: (column) => column);
+
+  GeneratedColumn<String> get tags =>
+      $composableBuilder(column: $table.tags, builder: (column) => column);
+
+  GeneratedColumn<String> get director =>
+      $composableBuilder(column: $table.director, builder: (column) => column);
+
+  GeneratedColumn<String> get studio =>
+      $composableBuilder(column: $table.studio, builder: (column) => column);
+
+  GeneratedColumn<int> get globalRank => $composableBuilder(
+    column: $table.globalRank,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get lastFetchedAt => $composableBuilder(
     column: $table.lastFetchedAt,
@@ -2360,20 +2816,34 @@ class $$SubjectsTableTableManager
                 Value<String> nameCn = const Value.absent(),
                 Value<String> nameJp = const Value.absent(),
                 Value<String> posterUrl = const Value.absent(),
+                Value<String> largePosterUrl = const Value.absent(),
+                Value<String> localThumbnailPath = const Value.absent(),
+                Value<String> localLargeImagePath = const Value.absent(),
                 Value<String> airDate = const Value.absent(),
                 Value<int> eps = const Value.absent(),
                 Value<double> rating = const Value.absent(),
                 Value<String> summary = const Value.absent(),
+                Value<String> tags = const Value.absent(),
+                Value<String> director = const Value.absent(),
+                Value<String> studio = const Value.absent(),
+                Value<int> globalRank = const Value.absent(),
                 Value<DateTime> lastFetchedAt = const Value.absent(),
               }) => SubjectsCompanion(
                 subjectId: subjectId,
                 nameCn: nameCn,
                 nameJp: nameJp,
                 posterUrl: posterUrl,
+                largePosterUrl: largePosterUrl,
+                localThumbnailPath: localThumbnailPath,
+                localLargeImagePath: localLargeImagePath,
                 airDate: airDate,
                 eps: eps,
                 rating: rating,
                 summary: summary,
+                tags: tags,
+                director: director,
+                studio: studio,
+                globalRank: globalRank,
                 lastFetchedAt: lastFetchedAt,
               ),
           createCompanionCallback:
@@ -2382,20 +2852,34 @@ class $$SubjectsTableTableManager
                 Value<String> nameCn = const Value.absent(),
                 Value<String> nameJp = const Value.absent(),
                 Value<String> posterUrl = const Value.absent(),
+                Value<String> largePosterUrl = const Value.absent(),
+                Value<String> localThumbnailPath = const Value.absent(),
+                Value<String> localLargeImagePath = const Value.absent(),
                 Value<String> airDate = const Value.absent(),
                 Value<int> eps = const Value.absent(),
                 Value<double> rating = const Value.absent(),
                 Value<String> summary = const Value.absent(),
+                Value<String> tags = const Value.absent(),
+                Value<String> director = const Value.absent(),
+                Value<String> studio = const Value.absent(),
+                Value<int> globalRank = const Value.absent(),
                 Value<DateTime> lastFetchedAt = const Value.absent(),
               }) => SubjectsCompanion.insert(
                 subjectId: subjectId,
                 nameCn: nameCn,
                 nameJp: nameJp,
                 posterUrl: posterUrl,
+                largePosterUrl: largePosterUrl,
+                localThumbnailPath: localThumbnailPath,
+                localLargeImagePath: localLargeImagePath,
                 airDate: airDate,
                 eps: eps,
                 rating: rating,
                 summary: summary,
+                tags: tags,
+                director: director,
+                studio: studio,
+                globalRank: globalRank,
                 lastFetchedAt: lastFetchedAt,
               ),
           withReferenceMapper: (p0) => p0

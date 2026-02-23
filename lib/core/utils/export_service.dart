@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
 import 'package:anime_shelf/core/database/app_database.dart';
 import 'package:anime_shelf/core/exceptions/api_exception.dart';
+import 'package:anime_shelf/core/utils/local_image_service.dart';
 import 'package:anime_shelf/features/search/data/bangumi_subject.dart';
 import 'package:anime_shelf/features/search/data/search_repository.dart';
 import 'package:anime_shelf/features/shelf/data/shelf_repository.dart';
@@ -127,9 +129,15 @@ class ExportService {
   final AppDatabase _db;
   final ShelfRepository _shelfRepo;
   final SearchRepository? _searchRepo;
+  final LocalImageService? _imageService;
 
-  ExportService(this._db, this._shelfRepo, {SearchRepository? searchRepo})
-    : _searchRepo = searchRepo;
+  ExportService(
+    this._db,
+    this._shelfRepo, {
+    SearchRepository? searchRepo,
+    LocalImageService? imageService,
+  }) : _searchRepo = searchRepo,
+       _imageService = imageService;
 
   // ── JSON Export ──
 
@@ -162,10 +170,17 @@ class ExportService {
               'nameCn': s.nameCn,
               'nameJp': s.nameJp,
               'posterUrl': s.posterUrl,
+              'largePosterUrl': s.largePosterUrl,
               'airDate': s.airDate,
               'eps': s.eps,
               'rating': s.rating,
               'summary': s.summary,
+              'tags': s.tags,
+              'director': s.director,
+              'studio': s.studio,
+              'globalRank': s.globalRank,
+              // localThumbnailPath and localLargeImagePath are
+              // intentionally omitted — they are device-specific.
             },
           )
           .toList(),
@@ -327,10 +342,18 @@ class ExportService {
                 nameCn: Value(map['nameCn'] as String? ?? ''),
                 nameJp: Value(map['nameJp'] as String? ?? ''),
                 posterUrl: Value(map['posterUrl'] as String? ?? ''),
+                largePosterUrl: Value(map['largePosterUrl'] as String? ?? ''),
+                // Local paths are device-specific; clear on import.
+                localThumbnailPath: const Value(''),
+                localLargeImagePath: const Value(''),
                 airDate: Value(map['airDate'] as String? ?? ''),
                 eps: Value(map['eps'] as int? ?? 0),
                 rating: Value((map['rating'] as num?)?.toDouble() ?? 0.0),
                 summary: Value(map['summary'] as String? ?? ''),
+                tags: Value(map['tags'] as String? ?? ''),
+                director: Value(map['director'] as String? ?? ''),
+                studio: Value(map['studio'] as String? ?? ''),
+                globalRank: Value(map['globalRank'] as int? ?? 0),
               ),
             );
       }
@@ -642,6 +665,15 @@ class ExportService {
 
           await searchRepo.cacheSubject(top1);
           await _shelfRepo.createEntry(subjectId: top1.id, tierId: line.tierId);
+
+          // Queue background image download (fire-and-forget).
+          unawaited(
+            _imageService?.downloadAndProcess(
+              subjectId: top1.id,
+              largeUrl: top1.images?.large ?? '',
+              mediumUrl: top1.images?.medium ?? '',
+            ),
+          );
 
           existingSubjectIds.add(top1.id);
           importedCount += 1;

@@ -44,5 +44,24 @@ final bangumiClientProvider = Provider<BangumiClient>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef BangumiClientRef = ProviderRef<BangumiClient>;
+String _$localImageServiceHash() => r'9daf83cdec1d33e4c7c546c57110559e467d8311';
+
+/// Global local image service provider.
+///
+/// Copied from [localImageService].
+@ProviderFor(localImageService)
+final localImageServiceProvider = Provider<LocalImageService>.internal(
+  localImageService,
+  name: r'localImageServiceProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$localImageServiceHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef LocalImageServiceRef = ProviderRef<LocalImageService>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

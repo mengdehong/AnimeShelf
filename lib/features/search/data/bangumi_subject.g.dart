@@ -20,6 +20,18 @@ _$BangumiSubjectImpl _$$BangumiSubjectImplFromJson(Map<String, dynamic> json) =>
       rating: json['rating'] == null
           ? null
           : BangumiRating.fromJson(json['rating'] as Map<String, dynamic>),
+      tags:
+          (json['tags'] as List<dynamic>?)
+              ?.map((e) => BangumiTag.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      infobox:
+          (json['infobox'] as List<dynamic>?)
+              ?.map(
+                (e) => BangumiInfoboxItem.fromJson(e as Map<String, dynamic>),
+              )
+              .toList() ??
+          const [],
     );
 
 Map<String, dynamic> _$$BangumiSubjectImplToJson(
@@ -33,6 +45,8 @@ Map<String, dynamic> _$$BangumiSubjectImplToJson(
   'eps': instance.eps,
   'images': instance.images,
   'rating': instance.rating,
+  'tags': instance.tags,
+  'infobox': instance.infobox,
 };
 
 _$BangumiImagesImpl _$$BangumiImagesImplFromJson(Map<String, dynamic> json) =>
@@ -55,10 +69,35 @@ _$BangumiRatingImpl _$$BangumiRatingImplFromJson(Map<String, dynamic> json) =>
     _$BangumiRatingImpl(
       score: (json['score'] as num?)?.toDouble() ?? 0.0,
       total: (json['total'] as num?)?.toInt() ?? 0,
+      rank: (json['rank'] as num?)?.toInt() ?? 0,
     );
 
 Map<String, dynamic> _$$BangumiRatingImplToJson(_$BangumiRatingImpl instance) =>
-    <String, dynamic>{'score': instance.score, 'total': instance.total};
+    <String, dynamic>{
+      'score': instance.score,
+      'total': instance.total,
+      'rank': instance.rank,
+    };
+
+_$BangumiTagImpl _$$BangumiTagImplFromJson(Map<String, dynamic> json) =>
+    _$BangumiTagImpl(
+      name: json['name'] as String? ?? '',
+      count: (json['count'] as num?)?.toInt() ?? 0,
+    );
+
+Map<String, dynamic> _$$BangumiTagImplToJson(_$BangumiTagImpl instance) =>
+    <String, dynamic>{'name': instance.name, 'count': instance.count};
+
+_$BangumiInfoboxItemImpl _$$BangumiInfoboxItemImplFromJson(
+  Map<String, dynamic> json,
+) => _$BangumiInfoboxItemImpl(
+  key: json['key'] as String? ?? '',
+  value: json['value'] == null ? '' : _infoboxValueFromJson(json['value']),
+);
+
+Map<String, dynamic> _$$BangumiInfoboxItemImplToJson(
+  _$BangumiInfoboxItemImpl instance,
+) => <String, dynamic>{'key': instance.key, 'value': instance.value};
 
 _$BangumiSearchResponseImpl _$$BangumiSearchResponseImplFromJson(
   Map<String, dynamic> json,

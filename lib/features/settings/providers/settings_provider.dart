@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:anime_shelf/core/providers.dart';
 import 'package:anime_shelf/core/utils/export_service.dart';
+
 import 'package:anime_shelf/features/search/providers/search_provider.dart';
 import 'package:anime_shelf/features/shelf/providers/shelf_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -16,6 +17,7 @@ ExportService exportService(ExportServiceRef ref) {
     ref.watch(databaseProvider),
     ref.watch(shelfRepositoryProvider),
     searchRepo: ref.watch(searchRepositoryProvider),
+    imageService: ref.watch(localImageServiceProvider),
   );
 }
 
@@ -202,6 +204,103 @@ class PlainTextImportTaskNotifier extends Notifier<PlainTextImportTaskState> {
       _token = null;
       state = state.copyWith(
         status: PlainTextImportTaskStatus.failed,
+        errorMessage: error.toString(),
+      );
+    }
+  }
+}
+
+// ── Image Management Providers ──
+
+enum ImageTaskStatus { idle, running, completed, failed }
+
+class ImageTaskState {
+  final ImageTaskStatus status;
+  final int processed;
+  final int total;
+  final int succeeded;
+  final String? errorMessage;
+
+  const ImageTaskState({
+    this.status = ImageTaskStatus.idle,
+    this.processed = 0,
+    this.total = 0,
+    this.succeeded = 0,
+    this.errorMessage,
+  });
+
+  bool get isRunning => status == ImageTaskStatus.running;
+
+  bool get showPanel =>
+      isRunning ||
+      status == ImageTaskStatus.completed ||
+      status == ImageTaskStatus.failed;
+
+  double get progress => total == 0 ? 0.0 : (processed / total).clamp(0.0, 1.0);
+
+  ImageTaskState copyWith({
+    ImageTaskStatus? status,
+    int? processed,
+    int? total,
+    int? succeeded,
+    String? errorMessage,
+    bool clearError = false,
+  }) {
+    return ImageTaskState(
+      status: status ?? this.status,
+      processed: processed ?? this.processed,
+      total: total ?? this.total,
+      succeeded: succeeded ?? this.succeeded,
+      errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+    );
+  }
+}
+
+final imageRedownloadTaskProvider =
+    NotifierProvider<ImageRedownloadTaskNotifier, ImageTaskState>(
+      ImageRedownloadTaskNotifier.new,
+    );
+
+class ImageRedownloadTaskNotifier extends Notifier<ImageTaskState> {
+  @override
+  ImageTaskState build() {
+    return const ImageTaskState();
+  }
+
+  bool startRedownload() {
+    if (state.isRunning) {
+      return false;
+    }
+
+    state = const ImageTaskState(status: ImageTaskStatus.running);
+    unawaited(_run());
+    return true;
+  }
+
+  void closePanel() {
+    if (state.isRunning) {
+      return;
+    }
+    state = const ImageTaskState();
+  }
+
+  Future<void> _run() async {
+    try {
+      final imageService = ref.read(localImageServiceProvider);
+      final succeeded = await imageService.redownloadAll(
+        concurrency: 3,
+        onProgress: (processed, total) {
+          state = state.copyWith(processed: processed, total: total);
+        },
+      );
+
+      state = state.copyWith(
+        status: ImageTaskStatus.completed,
+        succeeded: succeeded,
+      );
+    } catch (error) {
+      state = state.copyWith(
+        status: ImageTaskStatus.failed,
         errorMessage: error.toString(),
       );
     }

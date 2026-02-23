@@ -6,11 +6,15 @@ part of 'theme_notifier.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$themeNotifierHash() => r'8c0e0f2934884ff21703a30eb55b89ecad471f99';
+String _$themeNotifierHash() => r'7ee1f9a8ec679b8178d329584c8f47a5ab19f4bc';
 
 /// Manages theme selection, persisted via SharedPreferences.
 ///
-/// Theme indices: 0 = Sakura Pink, 1 = Bilibili Red, 2 = Dark.
+/// Theme indices:
+/// 0 = Bilibili Red,
+/// 1 = Dark,
+/// 2 = Pixiv Blue,
+/// 3 = Miku Teal.
 ///
 /// Copied from [ThemeNotifier].
 @ProviderFor(ThemeNotifier)

@@ -1,5 +1,6 @@
 import 'package:anime_shelf/core/database/app_database.dart';
 import 'package:anime_shelf/core/network/bangumi_client.dart';
+import 'package:anime_shelf/core/utils/local_image_service.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'providers.g.dart';
@@ -16,4 +17,13 @@ AppDatabase database(DatabaseRef ref) {
 @Riverpod(keepAlive: true)
 BangumiClient bangumiClient(BangumiClientRef ref) {
   return BangumiClient();
+}
+
+/// Global local image service provider.
+@Riverpod(keepAlive: true)
+LocalImageService localImageService(LocalImageServiceRef ref) {
+  return LocalImageService(
+    ref.watch(databaseProvider),
+    ref.watch(bangumiClientProvider).dio,
+  );
 }

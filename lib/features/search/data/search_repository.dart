@@ -55,7 +55,14 @@ class SearchRepository {
   }
 
   /// Caches a Bangumi subject into the local database.
+  ///
+  /// Extracts director/studio from infobox, top tags, and global rank.
   Future<void> cacheSubject(BangumiSubject subject) async {
+    final topTags = _extractTopTags(subject.tags, limit: 5);
+    final director = _extractInfoboxValue(subject.infobox, const ['导演', '监督']);
+    final studio = _extractInfoboxValue(subject.infobox, const ['动画制作']);
+    final globalRank = subject.rating?.rank ?? 0;
+
     await _db
         .into(_db.subjects)
         .insertOnConflictUpdate(
@@ -64,12 +71,43 @@ class SearchRepository {
             nameCn: Value(subject.nameCn),
             nameJp: Value(subject.name),
             posterUrl: Value(_thumbnailPosterUrl(subject.images)),
+            largePosterUrl: Value(_largePosterUrl(subject.images)),
             airDate: Value(subject.airDate),
             eps: Value(subject.eps),
             rating: Value(subject.rating?.score ?? 0.0),
             summary: Value(subject.summary),
+            tags: Value(topTags),
+            director: Value(director),
+            studio: Value(studio),
+            globalRank: Value(globalRank),
           ),
         );
+  }
+
+  /// Extracts top [limit] tags sorted by count, joined as comma-separated.
+  String _extractTopTags(List<BangumiTag> tags, {int limit = 5}) {
+    if (tags.isEmpty) {
+      return '';
+    }
+    final sorted = [...tags]..sort((a, b) => b.count.compareTo(a.count));
+    return sorted
+        .take(limit)
+        .map((tag) => tag.name)
+        .where((name) => name.isNotEmpty)
+        .join(',');
+  }
+
+  /// Extracts the first matching value from infobox by key names.
+  String _extractInfoboxValue(
+    List<BangumiInfoboxItem> infobox,
+    List<String> keys,
+  ) {
+    for (final item in infobox) {
+      if (keys.contains(item.key) && item.value.isNotEmpty) {
+        return item.value;
+      }
+    }
+    return '';
   }
 
   String _thumbnailPosterUrl(BangumiImages? images) {
@@ -86,6 +124,18 @@ class SearchRepository {
       return images.grid;
     }
     return images.large;
+  }
+
+  /// Extracts the large poster URL from Bangumi images.
+  String _largePosterUrl(BangumiImages? images) {
+    if (images == null) {
+      return '';
+    }
+    if (images.large.isNotEmpty) {
+      return images.large;
+    }
+    // Fallback to medium if large is unavailable.
+    return images.medium;
   }
 
   /// Refreshes a cached subject from the API.

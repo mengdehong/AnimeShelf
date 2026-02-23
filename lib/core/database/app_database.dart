@@ -8,6 +8,7 @@ import 'package:drift_flutter/drift_flutter.dart';
 part 'app_database.g.dart';
 
 const _defaultRankTierNames = <String>{'sss', 'ss', 's', 'a', 'b', 'c', 'd'};
+const _defaultInboxSort = 8000.0;
 
 class _DefaultTierSeed {
   final String name;
@@ -29,7 +30,7 @@ const _defaultTierSeeds = <_DefaultTierSeed>[
   _DefaultTierSeed(
     name: 'Inbox',
     colorValue: 0xFF9E9E9E,
-    tierSort: 0.0,
+    tierSort: _defaultInboxSort,
     isInbox: true,
   ),
   _DefaultTierSeed(
@@ -86,7 +87,7 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'anime_shelf'));
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration {
@@ -103,7 +104,68 @@ class AppDatabase extends _$AppDatabase {
         if (from < 3) {
           await _forceResetDefaultTiersForV3();
         }
+        if (from < 4) {
+          await _addLocalImageColumns();
+        }
+        if (from < 5) {
+          await _addMetadataColumns();
+        }
+        if (from < 6) {
+          await _moveInboxToBottom();
+        }
       },
+    );
+  }
+
+  /// v6 migration: move Inbox tier below ranked tiers by default.
+  Future<void> _moveInboxToBottom() async {
+    final highestRankedTier =
+        await (select(tiers)
+              ..where((tier) => tier.isInbox.equals(false))
+              ..orderBy([(tier) => OrderingTerm.desc(tier.tierSort)])
+              ..limit(1))
+            .getSingleOrNull();
+
+    final targetSort = (highestRankedTier?.tierSort ?? 7000.0) + 1000.0;
+
+    await (update(tiers)..where((tier) => tier.isInbox.equals(true))).write(
+      TiersCompanion(tierSort: Value(targetSort)),
+    );
+  }
+
+  /// v4 migration: add columns for local image storage.
+  Future<void> _addLocalImageColumns() async {
+    await customStatement(
+      'ALTER TABLE subjects ADD COLUMN large_poster_url TEXT '
+      "NOT NULL DEFAULT '';",
+    );
+    await customStatement(
+      'ALTER TABLE subjects ADD COLUMN local_thumbnail_path TEXT '
+      "NOT NULL DEFAULT '';",
+    );
+    await customStatement(
+      'ALTER TABLE subjects ADD COLUMN local_large_image_path TEXT '
+      "NOT NULL DEFAULT '';",
+    );
+  }
+
+  /// v5 migration: add metadata columns for tags, staff, and global rank.
+  Future<void> _addMetadataColumns() async {
+    await customStatement(
+      'ALTER TABLE subjects ADD COLUMN tags TEXT '
+      "NOT NULL DEFAULT '';",
+    );
+    await customStatement(
+      'ALTER TABLE subjects ADD COLUMN director TEXT '
+      "NOT NULL DEFAULT '';",
+    );
+    await customStatement(
+      'ALTER TABLE subjects ADD COLUMN studio TEXT '
+      "NOT NULL DEFAULT '';",
+    );
+    await customStatement(
+      'ALTER TABLE subjects ADD COLUMN global_rank INTEGER '
+      'NOT NULL DEFAULT 0;',
     );
   }
 
@@ -183,7 +245,7 @@ class AppDatabase extends _$AppDatabase {
         name: 'Inbox',
         emoji: '',
         colorValue: 0xFF9E9E9E,
-        tierSort: 0.0,
+        tierSort: _defaultInboxSort,
         isInbox: true,
       ),
     );

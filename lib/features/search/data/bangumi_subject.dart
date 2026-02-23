@@ -16,6 +16,8 @@ class BangumiSubject with _$BangumiSubject {
     @Default(0) int eps,
     BangumiImages? images,
     BangumiRating? rating,
+    @Default([]) List<BangumiTag> tags,
+    @Default([]) List<BangumiInfoboxItem> infobox,
   }) = _BangumiSubject;
 
   factory BangumiSubject.fromJson(Map<String, dynamic> json) =>
@@ -40,10 +42,53 @@ class BangumiRating with _$BangumiRating {
   const factory BangumiRating({
     @Default(0.0) double score,
     @Default(0) int total,
+    @Default(0) int rank,
   }) = _BangumiRating;
 
   factory BangumiRating.fromJson(Map<String, dynamic> json) =>
       _$BangumiRatingFromJson(json);
+}
+
+/// A single tag from the Bangumi API with its usage count.
+@freezed
+class BangumiTag with _$BangumiTag {
+  const factory BangumiTag({@Default('') String name, @Default(0) int count}) =
+      _BangumiTag;
+
+  factory BangumiTag.fromJson(Map<String, dynamic> json) =>
+      _$BangumiTagFromJson(json);
+}
+
+/// A single key-value item from the Bangumi infobox array.
+///
+/// The `value` field in the API can be either a plain string or a
+/// list of objects; we normalise it to a single string at parse time.
+@freezed
+class BangumiInfoboxItem with _$BangumiInfoboxItem {
+  const factory BangumiInfoboxItem({
+    @Default('') String key,
+    @Default('') @JsonKey(fromJson: _infoboxValueFromJson) String value,
+  }) = _BangumiInfoboxItem;
+
+  factory BangumiInfoboxItem.fromJson(Map<String, dynamic> json) =>
+      _$BangumiInfoboxItemFromJson(json);
+}
+
+/// Normalises the polymorphic infobox `value` field.
+///
+/// Bangumi returns either a plain string or a list of `{"v": "..."}` maps.
+String _infoboxValueFromJson(dynamic json) {
+  if (json is String) {
+    return json;
+  }
+  if (json is List) {
+    return json
+        .whereType<Map<String, dynamic>>()
+        .map((item) => item['v']?.toString() ?? '')
+        .where((v) => v.isNotEmpty)
+        .join(', ');
+  }
+  return json?.toString() ?? '';
 }
 
 /// Bangumi search API response wrapper.

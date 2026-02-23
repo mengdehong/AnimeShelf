@@ -6,7 +6,7 @@ part of 'details_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$entryDetailHash() => r'e7e723c58ef27564c7f1cdc0d3382c04854d76fa';
+String _$entryDetailHash() => r'ffe2ac4cb0bc49c2680826daa06b76303b61683e';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -30,28 +30,32 @@ class _SystemHash {
 }
 
 abstract class _$EntryDetail
-    extends BuildlessAutoDisposeAsyncNotifier<EntryWithSubject?> {
+    extends BuildlessAutoDisposeAsyncNotifier<EntryDetailData?> {
   late final int entryId;
 
-  FutureOr<EntryWithSubject?> build(int entryId);
+  FutureOr<EntryDetailData?> build(int entryId);
 }
 
-/// Watches a single entry with its primary subject for the detail page.
+/// Watches a single entry with its primary subject and current tier
+/// for the detail page.
 ///
 /// Copied from [EntryDetail].
 @ProviderFor(EntryDetail)
 const entryDetailProvider = EntryDetailFamily();
 
-/// Watches a single entry with its primary subject for the detail page.
+/// Watches a single entry with its primary subject and current tier
+/// for the detail page.
 ///
 /// Copied from [EntryDetail].
-class EntryDetailFamily extends Family<AsyncValue<EntryWithSubject?>> {
-  /// Watches a single entry with its primary subject for the detail page.
+class EntryDetailFamily extends Family<AsyncValue<EntryDetailData?>> {
+  /// Watches a single entry with its primary subject and current tier
+  /// for the detail page.
   ///
   /// Copied from [EntryDetail].
   const EntryDetailFamily();
 
-  /// Watches a single entry with its primary subject for the detail page.
+  /// Watches a single entry with its primary subject and current tier
+  /// for the detail page.
   ///
   /// Copied from [EntryDetail].
   EntryDetailProvider call(int entryId) {
@@ -80,13 +84,15 @@ class EntryDetailFamily extends Family<AsyncValue<EntryWithSubject?>> {
   String? get name => r'entryDetailProvider';
 }
 
-/// Watches a single entry with its primary subject for the detail page.
+/// Watches a single entry with its primary subject and current tier
+/// for the detail page.
 ///
 /// Copied from [EntryDetail].
 class EntryDetailProvider
     extends
-        AutoDisposeAsyncNotifierProviderImpl<EntryDetail, EntryWithSubject?> {
-  /// Watches a single entry with its primary subject for the detail page.
+        AutoDisposeAsyncNotifierProviderImpl<EntryDetail, EntryDetailData?> {
+  /// Watches a single entry with its primary subject and current tier
+  /// for the detail page.
   ///
   /// Copied from [EntryDetail].
   EntryDetailProvider(int entryId)
@@ -115,7 +121,7 @@ class EntryDetailProvider
   final int entryId;
 
   @override
-  FutureOr<EntryWithSubject?> runNotifierBuild(covariant EntryDetail notifier) {
+  FutureOr<EntryDetailData?> runNotifierBuild(covariant EntryDetail notifier) {
     return notifier.build(entryId);
   }
 
@@ -136,7 +142,7 @@ class EntryDetailProvider
   }
 
   @override
-  AutoDisposeAsyncNotifierProviderElement<EntryDetail, EntryWithSubject?>
+  AutoDisposeAsyncNotifierProviderElement<EntryDetail, EntryDetailData?>
   createElement() {
     return _EntryDetailProviderElement(this);
   }
@@ -157,14 +163,14 @@ class EntryDetailProvider
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-mixin EntryDetailRef on AutoDisposeAsyncNotifierProviderRef<EntryWithSubject?> {
+mixin EntryDetailRef on AutoDisposeAsyncNotifierProviderRef<EntryDetailData?> {
   /// The parameter `entryId` of this provider.
   int get entryId;
 }
 
 class _EntryDetailProviderElement
     extends
-        AutoDisposeAsyncNotifierProviderElement<EntryDetail, EntryWithSubject?>
+        AutoDisposeAsyncNotifierProviderElement<EntryDetail, EntryDetailData?>
     with EntryDetailRef {
   _EntryDetailProviderElement(super.provider);
 

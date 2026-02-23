@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:anime_shelf/core/providers.dart';
 import 'package:anime_shelf/features/search/data/bangumi_subject.dart';
 import 'package:anime_shelf/features/search/providers/search_provider.dart';
 import 'package:anime_shelf/features/shelf/providers/shelf_provider.dart';
@@ -83,6 +86,18 @@ class AddToShelfSheet extends ConsumerWidget {
     // Cache subject locally, then create entry
     await searchRepo.cacheSubject(subject);
     await shelfRepo.createEntry(subjectId: subject.id, tierId: tierId);
+
+    // Trigger background image download (fire-and-forget).
+    final imageService = ref.read(localImageServiceProvider);
+    final largeUrl = subject.images?.large ?? '';
+    final mediumUrl = subject.images?.medium ?? '';
+    unawaited(
+      imageService.downloadAndProcess(
+        subjectId: subject.id,
+        largeUrl: largeUrl,
+        mediumUrl: mediumUrl,
+      ),
+    );
 
     if (context.mounted) {
       Navigator.of(context).pop();

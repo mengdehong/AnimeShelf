@@ -31,6 +31,8 @@ mixin _$BangumiSubject {
   int get eps => throw _privateConstructorUsedError;
   BangumiImages? get images => throw _privateConstructorUsedError;
   BangumiRating? get rating => throw _privateConstructorUsedError;
+  List<BangumiTag> get tags => throw _privateConstructorUsedError;
+  List<BangumiInfoboxItem> get infobox => throw _privateConstructorUsedError;
 
   /// Serializes this BangumiSubject to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -58,6 +60,8 @@ abstract class $BangumiSubjectCopyWith<$Res> {
     int eps,
     BangumiImages? images,
     BangumiRating? rating,
+    List<BangumiTag> tags,
+    List<BangumiInfoboxItem> infobox,
   });
 
   $BangumiImagesCopyWith<$Res>? get images;
@@ -87,6 +91,8 @@ class _$BangumiSubjectCopyWithImpl<$Res, $Val extends BangumiSubject>
     Object? eps = null,
     Object? images = freezed,
     Object? rating = freezed,
+    Object? tags = null,
+    Object? infobox = null,
   }) {
     return _then(
       _value.copyWith(
@@ -122,6 +128,14 @@ class _$BangumiSubjectCopyWithImpl<$Res, $Val extends BangumiSubject>
                 ? _value.rating
                 : rating // ignore: cast_nullable_to_non_nullable
                       as BangumiRating?,
+            tags: null == tags
+                ? _value.tags
+                : tags // ignore: cast_nullable_to_non_nullable
+                      as List<BangumiTag>,
+            infobox: null == infobox
+                ? _value.infobox
+                : infobox // ignore: cast_nullable_to_non_nullable
+                      as List<BangumiInfoboxItem>,
           )
           as $Val,
     );
@@ -174,6 +188,8 @@ abstract class _$$BangumiSubjectImplCopyWith<$Res>
     int eps,
     BangumiImages? images,
     BangumiRating? rating,
+    List<BangumiTag> tags,
+    List<BangumiInfoboxItem> infobox,
   });
 
   @override
@@ -204,6 +220,8 @@ class __$$BangumiSubjectImplCopyWithImpl<$Res>
     Object? eps = null,
     Object? images = freezed,
     Object? rating = freezed,
+    Object? tags = null,
+    Object? infobox = null,
   }) {
     return _then(
       _$BangumiSubjectImpl(
@@ -239,6 +257,14 @@ class __$$BangumiSubjectImplCopyWithImpl<$Res>
             ? _value.rating
             : rating // ignore: cast_nullable_to_non_nullable
                   as BangumiRating?,
+        tags: null == tags
+            ? _value._tags
+            : tags // ignore: cast_nullable_to_non_nullable
+                  as List<BangumiTag>,
+        infobox: null == infobox
+            ? _value._infobox
+            : infobox // ignore: cast_nullable_to_non_nullable
+                  as List<BangumiInfoboxItem>,
       ),
     );
   }
@@ -256,7 +282,10 @@ class _$BangumiSubjectImpl implements _BangumiSubject {
     this.eps = 0,
     this.images,
     this.rating,
-  });
+    final List<BangumiTag> tags = const [],
+    final List<BangumiInfoboxItem> infobox = const [],
+  }) : _tags = tags,
+       _infobox = infobox;
 
   factory _$BangumiSubjectImpl.fromJson(Map<String, dynamic> json) =>
       _$$BangumiSubjectImplFromJson(json);
@@ -282,10 +311,27 @@ class _$BangumiSubjectImpl implements _BangumiSubject {
   final BangumiImages? images;
   @override
   final BangumiRating? rating;
+  final List<BangumiTag> _tags;
+  @override
+  @JsonKey()
+  List<BangumiTag> get tags {
+    if (_tags is EqualUnmodifiableListView) return _tags;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_tags);
+  }
+
+  final List<BangumiInfoboxItem> _infobox;
+  @override
+  @JsonKey()
+  List<BangumiInfoboxItem> get infobox {
+    if (_infobox is EqualUnmodifiableListView) return _infobox;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_infobox);
+  }
 
   @override
   String toString() {
-    return 'BangumiSubject(id: $id, name: $name, nameCn: $nameCn, summary: $summary, airDate: $airDate, eps: $eps, images: $images, rating: $rating)';
+    return 'BangumiSubject(id: $id, name: $name, nameCn: $nameCn, summary: $summary, airDate: $airDate, eps: $eps, images: $images, rating: $rating, tags: $tags, infobox: $infobox)';
   }
 
   @override
@@ -300,7 +346,9 @@ class _$BangumiSubjectImpl implements _BangumiSubject {
             (identical(other.airDate, airDate) || other.airDate == airDate) &&
             (identical(other.eps, eps) || other.eps == eps) &&
             (identical(other.images, images) || other.images == images) &&
-            (identical(other.rating, rating) || other.rating == rating));
+            (identical(other.rating, rating) || other.rating == rating) &&
+            const DeepCollectionEquality().equals(other._tags, _tags) &&
+            const DeepCollectionEquality().equals(other._infobox, _infobox));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -315,6 +363,8 @@ class _$BangumiSubjectImpl implements _BangumiSubject {
     eps,
     images,
     rating,
+    const DeepCollectionEquality().hash(_tags),
+    const DeepCollectionEquality().hash(_infobox),
   );
 
   /// Create a copy of BangumiSubject
@@ -344,6 +394,8 @@ abstract class _BangumiSubject implements BangumiSubject {
     final int eps,
     final BangumiImages? images,
     final BangumiRating? rating,
+    final List<BangumiTag> tags,
+    final List<BangumiInfoboxItem> infobox,
   }) = _$BangumiSubjectImpl;
 
   factory _BangumiSubject.fromJson(Map<String, dynamic> json) =
@@ -367,6 +419,10 @@ abstract class _BangumiSubject implements BangumiSubject {
   BangumiImages? get images;
   @override
   BangumiRating? get rating;
+  @override
+  List<BangumiTag> get tags;
+  @override
+  List<BangumiInfoboxItem> get infobox;
 
   /// Create a copy of BangumiSubject
   /// with the given fields replaced by the non-null parameter values.
@@ -601,6 +657,7 @@ BangumiRating _$BangumiRatingFromJson(Map<String, dynamic> json) {
 mixin _$BangumiRating {
   double get score => throw _privateConstructorUsedError;
   int get total => throw _privateConstructorUsedError;
+  int get rank => throw _privateConstructorUsedError;
 
   /// Serializes this BangumiRating to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -619,7 +676,7 @@ abstract class $BangumiRatingCopyWith<$Res> {
     $Res Function(BangumiRating) then,
   ) = _$BangumiRatingCopyWithImpl<$Res, BangumiRating>;
   @useResult
-  $Res call({double score, int total});
+  $Res call({double score, int total, int rank});
 }
 
 /// @nodoc
@@ -636,7 +693,7 @@ class _$BangumiRatingCopyWithImpl<$Res, $Val extends BangumiRating>
   /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
-  $Res call({Object? score = null, Object? total = null}) {
+  $Res call({Object? score = null, Object? total = null, Object? rank = null}) {
     return _then(
       _value.copyWith(
             score: null == score
@@ -646,6 +703,10 @@ class _$BangumiRatingCopyWithImpl<$Res, $Val extends BangumiRating>
             total: null == total
                 ? _value.total
                 : total // ignore: cast_nullable_to_non_nullable
+                      as int,
+            rank: null == rank
+                ? _value.rank
+                : rank // ignore: cast_nullable_to_non_nullable
                       as int,
           )
           as $Val,
@@ -662,7 +723,7 @@ abstract class _$$BangumiRatingImplCopyWith<$Res>
   ) = __$$BangumiRatingImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({double score, int total});
+  $Res call({double score, int total, int rank});
 }
 
 /// @nodoc
@@ -678,7 +739,7 @@ class __$$BangumiRatingImplCopyWithImpl<$Res>
   /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
-  $Res call({Object? score = null, Object? total = null}) {
+  $Res call({Object? score = null, Object? total = null, Object? rank = null}) {
     return _then(
       _$BangumiRatingImpl(
         score: null == score
@@ -689,6 +750,10 @@ class __$$BangumiRatingImplCopyWithImpl<$Res>
             ? _value.total
             : total // ignore: cast_nullable_to_non_nullable
                   as int,
+        rank: null == rank
+            ? _value.rank
+            : rank // ignore: cast_nullable_to_non_nullable
+                  as int,
       ),
     );
   }
@@ -697,7 +762,7 @@ class __$$BangumiRatingImplCopyWithImpl<$Res>
 /// @nodoc
 @JsonSerializable()
 class _$BangumiRatingImpl implements _BangumiRating {
-  const _$BangumiRatingImpl({this.score = 0.0, this.total = 0});
+  const _$BangumiRatingImpl({this.score = 0.0, this.total = 0, this.rank = 0});
 
   factory _$BangumiRatingImpl.fromJson(Map<String, dynamic> json) =>
       _$$BangumiRatingImplFromJson(json);
@@ -708,10 +773,13 @@ class _$BangumiRatingImpl implements _BangumiRating {
   @override
   @JsonKey()
   final int total;
+  @override
+  @JsonKey()
+  final int rank;
 
   @override
   String toString() {
-    return 'BangumiRating(score: $score, total: $total)';
+    return 'BangumiRating(score: $score, total: $total, rank: $rank)';
   }
 
   @override
@@ -720,12 +788,13 @@ class _$BangumiRatingImpl implements _BangumiRating {
         (other.runtimeType == runtimeType &&
             other is _$BangumiRatingImpl &&
             (identical(other.score, score) || other.score == score) &&
-            (identical(other.total, total) || other.total == total));
+            (identical(other.total, total) || other.total == total) &&
+            (identical(other.rank, rank) || other.rank == rank));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, score, total);
+  int get hashCode => Object.hash(runtimeType, score, total, rank);
 
   /// Create a copy of BangumiRating
   /// with the given fields replaced by the non-null parameter values.
@@ -742,8 +811,11 @@ class _$BangumiRatingImpl implements _BangumiRating {
 }
 
 abstract class _BangumiRating implements BangumiRating {
-  const factory _BangumiRating({final double score, final int total}) =
-      _$BangumiRatingImpl;
+  const factory _BangumiRating({
+    final double score,
+    final int total,
+    final int rank,
+  }) = _$BangumiRatingImpl;
 
   factory _BangumiRating.fromJson(Map<String, dynamic> json) =
       _$BangumiRatingImpl.fromJson;
@@ -752,12 +824,366 @@ abstract class _BangumiRating implements BangumiRating {
   double get score;
   @override
   int get total;
+  @override
+  int get rank;
 
   /// Create a copy of BangumiRating
   /// with the given fields replaced by the non-null parameter values.
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   _$$BangumiRatingImplCopyWith<_$BangumiRatingImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+BangumiTag _$BangumiTagFromJson(Map<String, dynamic> json) {
+  return _BangumiTag.fromJson(json);
+}
+
+/// @nodoc
+mixin _$BangumiTag {
+  String get name => throw _privateConstructorUsedError;
+  int get count => throw _privateConstructorUsedError;
+
+  /// Serializes this BangumiTag to a JSON map.
+  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
+
+  /// Create a copy of BangumiTag
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $BangumiTagCopyWith<BangumiTag> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $BangumiTagCopyWith<$Res> {
+  factory $BangumiTagCopyWith(
+    BangumiTag value,
+    $Res Function(BangumiTag) then,
+  ) = _$BangumiTagCopyWithImpl<$Res, BangumiTag>;
+  @useResult
+  $Res call({String name, int count});
+}
+
+/// @nodoc
+class _$BangumiTagCopyWithImpl<$Res, $Val extends BangumiTag>
+    implements $BangumiTagCopyWith<$Res> {
+  _$BangumiTagCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of BangumiTag
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({Object? name = null, Object? count = null}) {
+    return _then(
+      _value.copyWith(
+            name: null == name
+                ? _value.name
+                : name // ignore: cast_nullable_to_non_nullable
+                      as String,
+            count: null == count
+                ? _value.count
+                : count // ignore: cast_nullable_to_non_nullable
+                      as int,
+          )
+          as $Val,
+    );
+  }
+}
+
+/// @nodoc
+abstract class _$$BangumiTagImplCopyWith<$Res>
+    implements $BangumiTagCopyWith<$Res> {
+  factory _$$BangumiTagImplCopyWith(
+    _$BangumiTagImpl value,
+    $Res Function(_$BangumiTagImpl) then,
+  ) = __$$BangumiTagImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call({String name, int count});
+}
+
+/// @nodoc
+class __$$BangumiTagImplCopyWithImpl<$Res>
+    extends _$BangumiTagCopyWithImpl<$Res, _$BangumiTagImpl>
+    implements _$$BangumiTagImplCopyWith<$Res> {
+  __$$BangumiTagImplCopyWithImpl(
+    _$BangumiTagImpl _value,
+    $Res Function(_$BangumiTagImpl) _then,
+  ) : super(_value, _then);
+
+  /// Create a copy of BangumiTag
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({Object? name = null, Object? count = null}) {
+    return _then(
+      _$BangumiTagImpl(
+        name: null == name
+            ? _value.name
+            : name // ignore: cast_nullable_to_non_nullable
+                  as String,
+        count: null == count
+            ? _value.count
+            : count // ignore: cast_nullable_to_non_nullable
+                  as int,
+      ),
+    );
+  }
+}
+
+/// @nodoc
+@JsonSerializable()
+class _$BangumiTagImpl implements _BangumiTag {
+  const _$BangumiTagImpl({this.name = '', this.count = 0});
+
+  factory _$BangumiTagImpl.fromJson(Map<String, dynamic> json) =>
+      _$$BangumiTagImplFromJson(json);
+
+  @override
+  @JsonKey()
+  final String name;
+  @override
+  @JsonKey()
+  final int count;
+
+  @override
+  String toString() {
+    return 'BangumiTag(name: $name, count: $count)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$BangumiTagImpl &&
+            (identical(other.name, name) || other.name == name) &&
+            (identical(other.count, count) || other.count == count));
+  }
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  int get hashCode => Object.hash(runtimeType, name, count);
+
+  /// Create a copy of BangumiTag
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$BangumiTagImplCopyWith<_$BangumiTagImpl> get copyWith =>
+      __$$BangumiTagImplCopyWithImpl<_$BangumiTagImpl>(this, _$identity);
+
+  @override
+  Map<String, dynamic> toJson() {
+    return _$$BangumiTagImplToJson(this);
+  }
+}
+
+abstract class _BangumiTag implements BangumiTag {
+  const factory _BangumiTag({final String name, final int count}) =
+      _$BangumiTagImpl;
+
+  factory _BangumiTag.fromJson(Map<String, dynamic> json) =
+      _$BangumiTagImpl.fromJson;
+
+  @override
+  String get name;
+  @override
+  int get count;
+
+  /// Create a copy of BangumiTag
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$BangumiTagImplCopyWith<_$BangumiTagImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+BangumiInfoboxItem _$BangumiInfoboxItemFromJson(Map<String, dynamic> json) {
+  return _BangumiInfoboxItem.fromJson(json);
+}
+
+/// @nodoc
+mixin _$BangumiInfoboxItem {
+  String get key => throw _privateConstructorUsedError;
+  @JsonKey(fromJson: _infoboxValueFromJson)
+  String get value => throw _privateConstructorUsedError;
+
+  /// Serializes this BangumiInfoboxItem to a JSON map.
+  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
+
+  /// Create a copy of BangumiInfoboxItem
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $BangumiInfoboxItemCopyWith<BangumiInfoboxItem> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $BangumiInfoboxItemCopyWith<$Res> {
+  factory $BangumiInfoboxItemCopyWith(
+    BangumiInfoboxItem value,
+    $Res Function(BangumiInfoboxItem) then,
+  ) = _$BangumiInfoboxItemCopyWithImpl<$Res, BangumiInfoboxItem>;
+  @useResult
+  $Res call({
+    String key,
+    @JsonKey(fromJson: _infoboxValueFromJson) String value,
+  });
+}
+
+/// @nodoc
+class _$BangumiInfoboxItemCopyWithImpl<$Res, $Val extends BangumiInfoboxItem>
+    implements $BangumiInfoboxItemCopyWith<$Res> {
+  _$BangumiInfoboxItemCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of BangumiInfoboxItem
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({Object? key = null, Object? value = null}) {
+    return _then(
+      _value.copyWith(
+            key: null == key
+                ? _value.key
+                : key // ignore: cast_nullable_to_non_nullable
+                      as String,
+            value: null == value
+                ? _value.value
+                : value // ignore: cast_nullable_to_non_nullable
+                      as String,
+          )
+          as $Val,
+    );
+  }
+}
+
+/// @nodoc
+abstract class _$$BangumiInfoboxItemImplCopyWith<$Res>
+    implements $BangumiInfoboxItemCopyWith<$Res> {
+  factory _$$BangumiInfoboxItemImplCopyWith(
+    _$BangumiInfoboxItemImpl value,
+    $Res Function(_$BangumiInfoboxItemImpl) then,
+  ) = __$$BangumiInfoboxItemImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call({
+    String key,
+    @JsonKey(fromJson: _infoboxValueFromJson) String value,
+  });
+}
+
+/// @nodoc
+class __$$BangumiInfoboxItemImplCopyWithImpl<$Res>
+    extends _$BangumiInfoboxItemCopyWithImpl<$Res, _$BangumiInfoboxItemImpl>
+    implements _$$BangumiInfoboxItemImplCopyWith<$Res> {
+  __$$BangumiInfoboxItemImplCopyWithImpl(
+    _$BangumiInfoboxItemImpl _value,
+    $Res Function(_$BangumiInfoboxItemImpl) _then,
+  ) : super(_value, _then);
+
+  /// Create a copy of BangumiInfoboxItem
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({Object? key = null, Object? value = null}) {
+    return _then(
+      _$BangumiInfoboxItemImpl(
+        key: null == key
+            ? _value.key
+            : key // ignore: cast_nullable_to_non_nullable
+                  as String,
+        value: null == value
+            ? _value.value
+            : value // ignore: cast_nullable_to_non_nullable
+                  as String,
+      ),
+    );
+  }
+}
+
+/// @nodoc
+@JsonSerializable()
+class _$BangumiInfoboxItemImpl implements _BangumiInfoboxItem {
+  const _$BangumiInfoboxItemImpl({
+    this.key = '',
+    @JsonKey(fromJson: _infoboxValueFromJson) this.value = '',
+  });
+
+  factory _$BangumiInfoboxItemImpl.fromJson(Map<String, dynamic> json) =>
+      _$$BangumiInfoboxItemImplFromJson(json);
+
+  @override
+  @JsonKey()
+  final String key;
+  @override
+  @JsonKey(fromJson: _infoboxValueFromJson)
+  final String value;
+
+  @override
+  String toString() {
+    return 'BangumiInfoboxItem(key: $key, value: $value)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$BangumiInfoboxItemImpl &&
+            (identical(other.key, key) || other.key == key) &&
+            (identical(other.value, value) || other.value == value));
+  }
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  int get hashCode => Object.hash(runtimeType, key, value);
+
+  /// Create a copy of BangumiInfoboxItem
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$BangumiInfoboxItemImplCopyWith<_$BangumiInfoboxItemImpl> get copyWith =>
+      __$$BangumiInfoboxItemImplCopyWithImpl<_$BangumiInfoboxItemImpl>(
+        this,
+        _$identity,
+      );
+
+  @override
+  Map<String, dynamic> toJson() {
+    return _$$BangumiInfoboxItemImplToJson(this);
+  }
+}
+
+abstract class _BangumiInfoboxItem implements BangumiInfoboxItem {
+  const factory _BangumiInfoboxItem({
+    final String key,
+    @JsonKey(fromJson: _infoboxValueFromJson) final String value,
+  }) = _$BangumiInfoboxItemImpl;
+
+  factory _BangumiInfoboxItem.fromJson(Map<String, dynamic> json) =
+      _$BangumiInfoboxItemImpl.fromJson;
+
+  @override
+  String get key;
+  @override
+  @JsonKey(fromJson: _infoboxValueFromJson)
+  String get value;
+
+  /// Create a copy of BangumiInfoboxItem
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$BangumiInfoboxItemImplCopyWith<_$BangumiInfoboxItemImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
 

@@ -311,10 +311,17 @@ Subject _fakeSubject({
     nameCn: nameCn,
     nameJp: nameJp,
     posterUrl: posterUrl,
+    largePosterUrl: '',
+    localThumbnailPath: '',
+    localLargeImagePath: '',
     airDate: '',
     eps: 0,
     rating: 0.0,
     summary: '',
+    tags: '',
+    director: '',
+    studio: '',
+    globalRank: 0,
     lastFetchedAt: DateTime.now(),
   );
 }

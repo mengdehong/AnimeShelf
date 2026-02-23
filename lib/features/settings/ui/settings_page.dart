@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:anime_shelf/core/app_name_notifier.dart';
+import 'package:anime_shelf/core/providers.dart';
 import 'package:anime_shelf/core/theme/app_theme.dart';
 import 'package:anime_shelf/core/theme/theme_notifier.dart';
 import 'package:anime_shelf/core/utils/export_service.dart';
@@ -25,10 +26,16 @@ class SettingsPage extends HookConsumerWidget {
     final appName = ref.watch(appNameNotifierProvider);
     final importTaskState = ref.watch(plainTextImportTaskProvider);
     final importConcurrency = ref.watch(plainTextImportConcurrencyProvider);
+    final imageTaskState = ref.watch(imageRedownloadTaskProvider);
+
+    // Pick whichever bottom sheet is active (import takes priority).
+    final showImportPanel = importTaskState.showPanel;
+    final showImagePanel = !showImportPanel && imageTaskState.showPanel;
+    final hasBottomPanel = showImportPanel || showImagePanel;
 
     return Scaffold(
       appBar: const FusedAppBar(title: Text('Settings')),
-      bottomSheet: importTaskState.showPanel
+      bottomSheet: showImportPanel
           ? _PlainTextImportBottomSheet(
               state: importTaskState,
               onCancel: () {
@@ -46,14 +53,16 @@ class SettingsPage extends HookConsumerWidget {
                       );
                     },
             )
+          : showImagePanel
+          ? _ImageTaskBottomSheet(
+              state: imageTaskState,
+              onClose: () {
+                ref.read(imageRedownloadTaskProvider.notifier).closePanel();
+              },
+            )
           : null,
       body: ListView(
-        padding: EdgeInsets.fromLTRB(
-          16,
-          16,
-          16,
-          importTaskState.showPanel ? 180 : 16,
-        ),
+        padding: EdgeInsets.fromLTRB(16, 16, 16, hasBottomPanel ? 180 : 16),
         children: [
           // ── Theme Section ──
           Text('Theme', style: Theme.of(context).textTheme.titleMedium),
@@ -193,6 +202,24 @@ class SettingsPage extends HookConsumerWidget {
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 8),
+          ListTile(
+            leading: const Icon(Icons.download_outlined),
+            title: const Text('Re-download Images'),
+            subtitle: const Text(
+              'Download posters for entries missing local files',
+            ),
+            onTap: imageTaskState.isRunning
+                ? null
+                : () => _redownloadImages(context, ref),
+          ),
+          ListTile(
+            leading: const Icon(Icons.cleaning_services_outlined),
+            title: const Text('Clear Local Images'),
+            subtitle: const Text('Remove all cached poster files from device'),
+            onTap: imageTaskState.isRunning
+                ? null
+                : () => _confirmClearLocalImages(context, ref),
+          ),
           ListTile(
             leading: Icon(
               Icons.delete_sweep,
@@ -545,6 +572,65 @@ class SettingsPage extends HookConsumerWidget {
   String _buildPlainTextImportReportText(PlainTextImportReport report) {
     return buildPlainTextImportReportText(report);
   }
+
+  void _redownloadImages(BuildContext context, WidgetRef ref) {
+    final started = ref
+        .read(imageRedownloadTaskProvider.notifier)
+        .startRedownload();
+
+    if (!started) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Image download is already running')),
+      );
+    }
+  }
+
+  Future<void> _confirmClearLocalImages(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear Local Images?'),
+        content: const Text(
+          'This will delete all locally cached poster images. '
+          'Network URLs are preserved; images can be re-downloaded later.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) {
+      return;
+    }
+
+    try {
+      final imageService = ref.read(localImageServiceProvider);
+      final freedBytes = await imageService.clearAllLocalImages();
+      final freedMb = (freedBytes / (1024 * 1024)).toStringAsFixed(1);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Cleared images ($freedMb MB freed)')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to clear images: $e')));
+      }
+    }
+  }
 }
 
 class _PlainTextImportBottomSheet extends StatelessWidget {
@@ -680,5 +766,68 @@ class _PlainTextImportBottomSheet extends StatelessWidget {
       case PlainTextImportTaskStatus.failed:
         return 'Import failed';
     }
+  }
+}
+
+class _ImageTaskBottomSheet extends StatelessWidget {
+  final ImageTaskState state;
+  final VoidCallback onClose;
+
+  const _ImageTaskBottomSheet({required this.state, required this.onClose});
+
+  @override
+  Widget build(BuildContext context) {
+    final title = switch (state.status) {
+      ImageTaskStatus.idle => 'Idle',
+      ImageTaskStatus.running => 'Downloading images...',
+      ImageTaskStatus.completed =>
+        'Download complete (${state.succeeded}/${state.total})',
+      ImageTaskStatus.failed => 'Download failed',
+    };
+
+    return Material(
+      elevation: 8,
+      child: SafeArea(
+        top: false,
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            border: Border(
+              top: BorderSide(color: Theme.of(context).dividerColor),
+            ),
+          ),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              LinearProgressIndicator(value: state.progress),
+              const SizedBox(height: 8),
+              Text(
+                'Processed: ${state.processed}/${state.total}  '
+                'Succeeded: ${state.succeeded}',
+              ),
+              if (state.errorMessage != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  state.errorMessage!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ],
+              const SizedBox(height: 8),
+              if (!state.isRunning)
+                FilledButton.icon(
+                  onPressed: onClose,
+                  icon: const Icon(Icons.done),
+                  label: const Text('Close'),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
