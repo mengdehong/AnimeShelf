@@ -17,7 +17,7 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'anime_shelf'));
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration {
@@ -25,7 +25,32 @@ class AppDatabase extends _$AppDatabase {
       onCreate: (Migrator m) async {
         await m.createAll();
         await _seedDefaultTiers();
+        await _createPerformanceIndexes();
       },
+      onUpgrade: (Migrator m, int from, int to) async {
+        if (from < 2) {
+          await _createPerformanceIndexes();
+        }
+      },
+    );
+  }
+
+  Future<void> _createPerformanceIndexes() async {
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_tiers_tier_sort '
+      'ON tiers (tier_sort);',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_entries_tier_rank '
+      'ON entries (tier_id, entry_rank);',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_entries_primary_subject '
+      'ON entries (primary_subject_id);',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_entry_subjects_subject_id '
+      'ON entry_subjects (subject_id);',
     );
   }
 

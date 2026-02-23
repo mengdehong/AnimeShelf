@@ -15,13 +15,15 @@ class EntryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final subject = entryData.subject;
-    final metrics = Theme.of(context).extension<AppThemeMetrics>();
+    final metrics = theme.extension<AppThemeMetrics>();
     final title = subject?.nameCn.isNotEmpty == true
         ? subject!.nameCn
         : (subject?.nameJp ?? 'Unknown');
     final posterUrl = subject?.posterUrl ?? '';
     final posterRadius = metrics?.posterRadius ?? 12;
+    final placeholderColor = theme.colorScheme.surfaceContainerHighest;
 
     return GestureDetector(
       onTap: onTap,
@@ -37,18 +39,16 @@ class EntryCard extends StatelessWidget {
                 CachedNetworkImage(
                   imageUrl: posterUrl,
                   fit: BoxFit.cover,
+                  fadeInDuration: Duration.zero,
+                  fadeOutDuration: Duration.zero,
                   placeholder: (context, url) => Container(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.surfaceContainerHighest,
+                    color: placeholderColor,
                     child: const Center(
                       child: Icon(Icons.movie_outlined, size: 32),
                     ),
                   ),
                   errorWidget: (context, url, error) => Container(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.surfaceContainerHighest,
+                    color: placeholderColor,
                     child: const Center(
                       child: Icon(Icons.broken_image_outlined, size: 32),
                     ),
@@ -56,7 +56,7 @@ class EntryCard extends StatelessWidget {
                 )
               else
                 Container(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  color: placeholderColor,
                   child: const Center(
                     child: Icon(Icons.movie_outlined, size: 32),
                   ),

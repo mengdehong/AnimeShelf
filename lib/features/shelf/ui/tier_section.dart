@@ -29,10 +29,11 @@ class TierSection extends HookConsumerWidget {
     final tier = tierData.tier;
     final entries = tierData.entries;
     final tierColor = Color(tier.colorValue);
-    final metrics = Theme.of(context).extension<AppThemeMetrics>();
+    final theme = Theme.of(context);
+    final metrics = theme.extension<AppThemeMetrics>();
     final sectionRadius = metrics?.sectionRadius ?? 16;
     final posterRadius = metrics?.posterRadius ?? 12;
-    final cardShadow = Theme.of(context).cardTheme.shadowColor;
+    final cardColor = theme.cardTheme.color;
 
     return DragTarget<_EntryDragData>(
       onWillAcceptWithDetails: (details) => true,
@@ -45,22 +46,12 @@ class TierSection extends HookConsumerWidget {
       },
       builder: (context, candidateData, rejectedData) {
         final isHovering = candidateData.isNotEmpty;
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
+        return Container(
           margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: isHovering
-                ? tierColor.withValues(alpha: 0.12)
-                : Theme.of(context).cardTheme.color,
+            color: isHovering ? tierColor.withValues(alpha: 0.12) : cardColor,
             borderRadius: BorderRadius.circular(sectionRadius),
             border: isHovering ? Border.all(color: tierColor, width: 2) : null,
-            boxShadow: [
-              BoxShadow(
-                color: cardShadow ?? Colors.black.withValues(alpha: 0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -158,20 +149,12 @@ class TierSection extends HookConsumerWidget {
         borderRadius: BorderRadius.circular(posterRadius),
         child: Opacity(
           opacity: 0.85,
-          child: SizedBox(
-            width: 110,
-            height: 160,
-            child: EntryCard(entryData: entryData, onTap: () {}),
-          ),
+          child: _EntryCardBox(entryData: entryData, onTap: () {}),
         ),
       ),
       childWhenDragging: Opacity(
         opacity: 0.3,
-        child: SizedBox(
-          width: 110,
-          height: 160,
-          child: EntryCard(entryData: entryData, onTap: () {}),
-        ),
+        child: _EntryCardBox(entryData: entryData, onTap: () {}),
       ),
       child: DragTarget<_EntryDragData>(
         onWillAcceptWithDetails: (details) => true,
@@ -180,13 +163,9 @@ class TierSection extends HookConsumerWidget {
           _handleDrop(ref, details.data, index);
         },
         builder: (context, candidateData, rejectedData) {
-          return SizedBox(
-            width: 110,
-            height: 160,
-            child: EntryCard(
-              entryData: entryData,
-              onTap: () => context.push('/details/${entryData.entry.id}'),
-            ),
+          return _EntryCardBox(
+            entryData: entryData,
+            onTap: () => context.push('/details/${entryData.entry.id}'),
           );
         },
       ),
@@ -378,6 +357,24 @@ class _TierHeader extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _EntryCardBox extends StatelessWidget {
+  const _EntryCardBox({required this.entryData, required this.onTap});
+
+  final EntryWithSubject entryData;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 110,
+      height: 160,
+      child: RepaintBoundary(
+        child: EntryCard(entryData: entryData, onTap: onTap),
       ),
     );
   }

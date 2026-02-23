@@ -88,6 +88,12 @@ class AppThemeMetrics extends ThemeExtension<AppThemeMetrics> {
 class AppTheme {
   AppTheme._();
 
+  static final List<ThemeData> _allThemes = List<ThemeData>.unmodifiable([
+    sakuraPink(),
+    bilibiliRed(),
+    dark(),
+  ]);
+
   static ThemeData sakuraPink() {
     const primary = Color(0xFFF09199);
     const surface = Color(0xFFF5F5F7);
@@ -277,7 +283,14 @@ class AppTheme {
     );
   }
 
-  static List<ThemeData> get allThemes => [sakuraPink(), bilibiliRed(), dark()];
+  static List<ThemeData> get allThemes => _allThemes;
+
+  static ThemeData themeAt(int index) {
+    if (index < 0 || index >= _allThemes.length) {
+      return _allThemes.first;
+    }
+    return _allThemes[index];
+  }
 
   static const List<String> themeNames = [
     'Sakura Pink',

@@ -159,6 +159,7 @@ class _ShelfContent extends HookConsumerWidget {
     return ReorderableListView.builder(
       padding: const EdgeInsets.only(bottom: 16),
       buildDefaultDragHandles: false,
+      cacheExtent: 600,
       itemCount: tiers.length,
       onReorder: (oldIndex, newIndex) =>
           _onReorderTier(ref, oldIndex, newIndex),
@@ -175,11 +176,9 @@ class _ShelfContent extends HookConsumerWidget {
       },
       itemBuilder: (context, index) {
         final tierData = tiers[index];
-        return TierSection(
+        return RepaintBoundary(
           key: ValueKey(tierData.tier.id),
-          index: index,
-          tierData: tierData,
-          allTiers: tiers,
+          child: TierSection(index: index, tierData: tierData, allTiers: tiers),
         );
       },
     );

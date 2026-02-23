@@ -33,14 +33,13 @@ class AnimeShelfApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeIndex = ref.watch(themeNotifierProvider);
-    final themes = AppTheme.allThemes;
-    final theme = themeIndex >= 0 && themeIndex < themes.length
-        ? themes[themeIndex]
-        : themes[0];
+    final theme = AppTheme.themeAt(themeIndex);
 
     return MaterialApp.router(
       title: 'AnimeShelf',
       theme: theme,
+      themeAnimationDuration: const Duration(milliseconds: 120),
+      themeAnimationCurve: Curves.linear,
       routerConfig: appRouter,
       debugShowCheckedModeBanner: false,
     );

@@ -120,11 +120,15 @@ class ShelfRepository {
                 .get();
 
         final newRanks = RankUtils.recompressRanks(entries.length);
-        for (var i = 0; i < entries.length; i++) {
-          await (_db.update(_db.entries)
-                ..where((e) => e.id.equals(entries[i].id)))
-              .write(EntriesCompanion(entryRank: Value(newRanks[i])));
-        }
+        await _db.batch((batch) {
+          for (var i = 0; i < entries.length; i++) {
+            batch.update(
+              _db.entries,
+              EntriesCompanion(entryRank: Value(newRanks[i])),
+              where: (tbl) => tbl.id.equals(entries[i].id),
+            );
+          }
+        });
       });
     } catch (e) {
       throw DatabaseException(
@@ -143,11 +147,15 @@ class ShelfRepository {
         )..orderBy([(t) => OrderingTerm.asc(t.tierSort)])).get();
 
         final newSorts = RankUtils.recompressRanks(allTiers.length);
-        for (var i = 0; i < allTiers.length; i++) {
-          await (_db.update(_db.tiers)
-                ..where((t) => t.id.equals(allTiers[i].id)))
-              .write(TiersCompanion(tierSort: Value(newSorts[i])));
-        }
+        await _db.batch((batch) {
+          for (var i = 0; i < allTiers.length; i++) {
+            batch.update(
+              _db.tiers,
+              TiersCompanion(tierSort: Value(newSorts[i])),
+              where: (tbl) => tbl.id.equals(allTiers[i].id),
+            );
+          }
+        });
       });
     } catch (e) {
       throw DatabaseException(
@@ -324,9 +332,11 @@ class ShelfRepository {
 
   /// Checks if a subject already exists as an entry on the shelf.
   Future<bool> subjectExists(int subjectId) async {
-    final count = await (_db.select(
-      _db.entrySubjects,
-    )..where((es) => es.subjectId.equals(subjectId))).get();
-    return count.isNotEmpty;
+    final existing =
+        await (_db.select(_db.entrySubjects)
+              ..where((es) => es.subjectId.equals(subjectId))
+              ..limit(1))
+            .getSingleOrNull();
+    return existing != null;
   }
 }
