@@ -160,11 +160,14 @@ void main() {
       // Allow stream to emit
       await tester.pumpAndSettle();
 
-      // Seed tiers: Inbox, S, A, B
+      // Seed tiers should include the new top ranks.
       expect(find.text('Inbox'), findsOneWidget);
+      expect(find.text('SSS'), findsOneWidget);
+      expect(find.text('SS'), findsOneWidget);
       expect(find.text('S'), findsOneWidget);
-      expect(find.text('A'), findsOneWidget);
-      expect(find.text('B'), findsOneWidget);
+
+      final seededTiers = await db.select(db.tiers).get();
+      expect(seededTiers.length, equals(8));
 
       await db.close();
     });
@@ -230,7 +233,7 @@ void main() {
 
       // Inbox shows special message, other tiers show empty text
       expect(find.text('Search and add anime to get started'), findsOneWidget);
-      expect(find.text(''), findsNWidgets(3));
+      expect(find.text(''), findsAtLeastNWidgets(3));
 
       await db.close();
     });

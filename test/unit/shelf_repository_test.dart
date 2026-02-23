@@ -20,16 +20,20 @@ void main() {
   });
 
   group('Tier operations', () {
-    test('seed creates 4 default tiers', () async {
+    test('seed creates 8 default tiers', () async {
       final tiers = await (db.select(
         db.tiers,
       )..orderBy([(t) => OrderingTerm.asc(t.tierSort)])).get();
-      expect(tiers.length, equals(4));
+      expect(tiers.length, equals(8));
       expect(tiers[0].name, equals('Inbox'));
       expect(tiers[0].isInbox, isTrue);
-      expect(tiers[1].name, equals('S'));
-      expect(tiers[2].name, equals('A'));
-      expect(tiers[3].name, equals('B'));
+      expect(tiers[1].name, equals('SSS'));
+      expect(tiers[2].name, equals('SS'));
+      expect(tiers[3].name, equals('S'));
+      expect(tiers[4].name, equals('A'));
+      expect(tiers[5].name, equals('B'));
+      expect(tiers[6].name, equals('C'));
+      expect(tiers[7].name, equals('D'));
     });
 
     test('addTier places new tier after the last one', () async {
@@ -39,7 +43,7 @@ void main() {
         colorValue: 0xFF00FF00,
       );
       expect(newTier.name, equals('C'));
-      expect(newTier.tierSort, greaterThan(3000.0));
+      expect(newTier.tierSort, greaterThan(7000.0));
     });
 
     test('updateTier changes name', () async {
@@ -96,6 +100,10 @@ void main() {
       expect(recompressed[1].tierSort, equals(2000.0));
       expect(recompressed[2].tierSort, equals(3000.0));
       expect(recompressed[3].tierSort, equals(4000.0));
+      expect(recompressed[4].tierSort, equals(5000.0));
+      expect(recompressed[5].tierSort, equals(6000.0));
+      expect(recompressed[6].tierSort, equals(7000.0));
+      expect(recompressed[7].tierSort, equals(8000.0));
     });
 
     test('deleteTier moves entries to inbox', () async {
@@ -285,7 +293,7 @@ void main() {
       await repo.createEntry(subjectId: 100, tierId: tierS.id);
 
       final result = await repo.watchTiersWithEntries().first;
-      expect(result.length, equals(4)); // 4 seed tiers
+      expect(result.length, equals(8)); // 8 seed tiers
 
       final sTier = result.firstWhere((t) => t.tier.name == 'S');
       expect(sTier.entries.length, equals(1));
@@ -307,7 +315,7 @@ void main() {
     test('emits tiers ordered by tierSort', () async {
       final result = await repo.watchTiers().first;
 
-      expect(result.length, equals(4));
+      expect(result.length, equals(8));
       for (var i = 1; i < result.length; i++) {
         expect(result[i].tierSort, greaterThan(result[i - 1].tierSort));
       }

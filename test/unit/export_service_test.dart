@@ -99,7 +99,7 @@ void main() {
     test('exports seed tiers', () async {
       final data = await exportService.exportJson();
       final tiers = data['tiers'] as List;
-      expect(tiers.length, equals(4));
+      expect(tiers.length, equals(8));
     });
 
     test('exports entries with subjects', () async {
@@ -198,7 +198,7 @@ void main() {
 
       // Verify tiers
       final tiers = await db.select(db.tiers).get();
-      expect(tiers.length, equals(4));
+      expect(tiers.length, equals(8));
 
       // Verify subjects
       final subjects = await db.select(db.subjects).get();
@@ -305,7 +305,7 @@ void main() {
         },
       ];
 
-      const text = 'SS\nclannad\n';
+      const text = 'SSSS\nclannad\n';
       final report = await exportService.importPlainText(text);
 
       final tiers = await db.select(db.tiers).get();
@@ -315,7 +315,7 @@ void main() {
       )..where((entry) => entry.tierId.equals(inbox.id))).get();
 
       expect(entries.length, equals(1));
-      expect(report.unknownTierHeaders, contains('SS'));
+      expect(report.unknownTierHeaders, contains('SSSS'));
       expect(report.inboxFallbackEntries.length, equals(1));
     });
 

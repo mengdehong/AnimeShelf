@@ -87,7 +87,7 @@ class ShelfPage extends HookConsumerWidget {
               controller: nameController,
               decoration: const InputDecoration(
                 labelText: 'Name',
-                hintText: 'e.g. S, A, B, C...',
+                hintText: 'e.g. SSS, SS, S, A...',
               ),
               autofocus: true,
             ),

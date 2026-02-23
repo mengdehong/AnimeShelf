@@ -289,7 +289,7 @@ class ExportService {
   /// Imports entries from plain text where each non-empty line is one anime.
   ///
   /// Tier headers can be specified as a standalone line, for example `S`.
-  /// If an unknown tier header is encountered (for example `SS`),
+  /// If an unknown tier header is encountered (for example `SSSS`),
   /// subsequent entries default to Inbox and are reported.
   ///
   /// Uses Bangumi search Top1 only when confidence is high; low-confidence

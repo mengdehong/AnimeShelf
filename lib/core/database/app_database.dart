@@ -7,6 +7,75 @@ import 'package:drift_flutter/drift_flutter.dart';
 
 part 'app_database.g.dart';
 
+const _defaultRankTierNames = <String>{'sss', 'ss', 's', 'a', 'b', 'c', 'd'};
+
+class _DefaultTierSeed {
+  final String name;
+  final String emoji;
+  final int colorValue;
+  final double tierSort;
+  final bool isInbox;
+
+  const _DefaultTierSeed({
+    required this.name,
+    required this.colorValue,
+    required this.tierSort,
+    this.emoji = '',
+    this.isInbox = false,
+  });
+}
+
+const _defaultTierSeeds = <_DefaultTierSeed>[
+  _DefaultTierSeed(
+    name: 'Inbox',
+    colorValue: 0xFF9E9E9E,
+    tierSort: 0.0,
+    isInbox: true,
+  ),
+  _DefaultTierSeed(
+    name: 'SSS',
+    emoji: '\u{1F451}',
+    colorValue: 0xFFFFD700,
+    tierSort: 1000.0,
+  ),
+  _DefaultTierSeed(
+    name: 'SS',
+    emoji: '\u{2B50}',
+    colorValue: 0xFFFFA726,
+    tierSort: 2000.0,
+  ),
+  _DefaultTierSeed(
+    name: 'S',
+    emoji: '\u{1F525}',
+    colorValue: 0xFFFF6B6B,
+    tierSort: 3000.0,
+  ),
+  _DefaultTierSeed(
+    name: 'A',
+    emoji: '\u{1F44D}',
+    colorValue: 0xFF4ECDC4,
+    tierSort: 4000.0,
+  ),
+  _DefaultTierSeed(
+    name: 'B',
+    emoji: '\u{1F3AF}',
+    colorValue: 0xFF45B7D1,
+    tierSort: 5000.0,
+  ),
+  _DefaultTierSeed(
+    name: 'C',
+    emoji: '\u{1F642}',
+    colorValue: 0xFF98D8C8,
+    tierSort: 6000.0,
+  ),
+  _DefaultTierSeed(
+    name: 'D',
+    emoji: '\u{1FAE0}',
+    colorValue: 0xFFB0BEC5,
+    tierSort: 7000.0,
+  ),
+];
+
 /// Central Drift database for AnimeShelf.
 ///
 /// Contains all four tables and handles schema migrations
@@ -17,7 +86,7 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'anime_shelf'));
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration {
@@ -30,6 +99,9 @@ class AppDatabase extends _$AppDatabase {
       onUpgrade: (Migrator m, int from, int to) async {
         if (from < 2) {
           await _createPerformanceIndexes();
+        }
+        if (from < 3) {
+          await _forceResetDefaultTiersForV3();
         }
       },
     );
@@ -54,35 +126,118 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
-  /// Seeds the database with an Inbox tier and three default tiers.
+  /// Seeds the database with Inbox + default ranking tiers.
   Future<void> _seedDefaultTiers() async {
     await batch((batch) {
-      batch.insertAll(tiers, [
-        TiersCompanion.insert(
-          name: 'Inbox',
-          colorValue: 0xFF9E9E9E,
-          tierSort: 0.0,
-          isInbox: const Value(true),
-        ),
-        TiersCompanion.insert(
-          name: 'S',
-          emoji: const Value('\u{1F451}'),
-          colorValue: 0xFFFFD700,
-          tierSort: 1000.0,
-        ),
-        TiersCompanion.insert(
-          name: 'A',
-          emoji: const Value('\u{2B50}'),
-          colorValue: 0xFFFF6B6B,
-          tierSort: 2000.0,
-        ),
-        TiersCompanion.insert(
-          name: 'B',
-          emoji: const Value('\u{1F44D}'),
-          colorValue: 0xFF4ECDC4,
-          tierSort: 3000.0,
-        ),
-      ]);
+      batch.insertAll(
+        tiers,
+        _defaultTierSeeds
+            .map((seed) => _seedToCompanion(seed))
+            .toList(growable: false),
+      );
     });
+  }
+
+  /// v3 migration: force-resets tiers to Inbox + SSS/SS/S/A/B/C/D.
+  ///
+  /// Entries are preserved. Entries from legacy tiers whose names match
+  /// the new defaults are mapped back to the matching tier; all other
+  /// entries stay in Inbox.
+  Future<void> _forceResetDefaultTiersForV3() async {
+    final existingTiers = await select(tiers).get();
+
+    Tier? inboxTier;
+    final tierNameById = <int, String>{};
+
+    for (final tier in existingTiers) {
+      if (inboxTier == null && tier.isInbox) {
+        inboxTier = tier;
+      }
+      tierNameById[tier.id] = tier.name.trim().toLowerCase();
+    }
+
+    if (inboxTier == null) {
+      final inboxSeed = _defaultTierSeeds.first;
+      final inboxId = await into(tiers).insert(_seedToCompanion(inboxSeed));
+      inboxTier = await (select(
+        tiers,
+      )..where((tier) => tier.id.equals(inboxId))).getSingle();
+      tierNameById[inboxTier.id] = inboxTier.name.trim().toLowerCase();
+    }
+
+    final resolvedInboxTier = inboxTier;
+
+    final allEntries = await select(entries).get();
+    final entryTargetNameById = <int, String>{};
+
+    for (final entry in allEntries) {
+      final sourceTierName = tierNameById[entry.tierId];
+      if (sourceTierName != null &&
+          _defaultRankTierNames.contains(sourceTierName)) {
+        entryTargetNameById[entry.id] = sourceTierName;
+      }
+    }
+
+    await update(tiers).replace(
+      resolvedInboxTier.copyWith(
+        name: 'Inbox',
+        emoji: '',
+        colorValue: 0xFF9E9E9E,
+        tierSort: 0.0,
+        isInbox: true,
+      ),
+    );
+
+    if (allEntries.isNotEmpty) {
+      await update(
+        entries,
+      ).write(EntriesCompanion(tierId: Value(resolvedInboxTier.id)));
+    }
+
+    await (delete(
+      tiers,
+    )..where((tier) => tier.id.isNotValue(resolvedInboxTier.id))).go();
+
+    await batch((batch) {
+      for (final seed in _defaultTierSeeds.where((seed) => !seed.isInbox)) {
+        batch.insert(tiers, _seedToCompanion(seed));
+      }
+    });
+
+    if (entryTargetNameById.isEmpty) {
+      return;
+    }
+
+    final currentTiers = await select(tiers).get();
+    final tierIdByName = <String, int>{};
+
+    for (final tier in currentTiers) {
+      if (!tier.isInbox) {
+        tierIdByName[tier.name.trim().toLowerCase()] = tier.id;
+      }
+    }
+
+    await batch((batch) {
+      entryTargetNameById.forEach((entryId, targetTierName) {
+        final targetTierId = tierIdByName[targetTierName];
+        if (targetTierId != null) {
+          batch.update(
+            entries,
+            EntriesCompanion(tierId: Value(targetTierId)),
+            where: (entry) => entry.id.equals(entryId),
+          );
+        }
+      });
+    });
+  }
+
+  TiersCompanion _seedToCompanion(_DefaultTierSeed seed) {
+    return TiersCompanion.insert(
+      name: seed.name,
+      emoji: Value(seed.emoji),
+      colorValue: seed.colorValue,
+      tierSort: seed.tierSort,
+      isInbox: Value(seed.isInbox),
+    );
   }
 }

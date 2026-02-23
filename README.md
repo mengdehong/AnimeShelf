@@ -6,7 +6,7 @@ Organize your anime collection using drag-and-drop tiers powered by
 
 ## Features
 
-- **Tier-based shelf** — Drag entries between custom tiers (SS, S, A, B, C, …).
+- **Tier-based shelf** — Drag entries between custom tiers (SSS, SS, S, A, B, C, …).
   Reorder tiers and entries with long-press drag-and-drop.
 - **Bangumi search** — Search and collect anime directly from the Bangumi API.
   Skeleton loading while network requests are in flight.
