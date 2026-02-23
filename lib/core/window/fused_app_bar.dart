@@ -77,6 +77,9 @@ class FusedAppBar extends ConsumerWidget implements PreferredSizeWidget {
   /// Width reserved for the app-name leading area.
   static const double _appNameLeadingWidth = 130.0;
 
+  /// Thin draggable strip to keep controls responsive on Linux custom bars.
+  static const double _desktopDragStripHeight = 8.0;
+
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 
@@ -132,11 +135,23 @@ class FusedAppBar extends ConsumerWidget implements PreferredSizeWidget {
       titleSpacing: titleSpacing,
     );
 
-    if (isDesktopCustomBar) {
-      return DragToMoveArea(child: appBar);
+    if (!isDesktopCustomBar) {
+      return appBar;
     }
 
-    return appBar;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        appBar,
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          height: _desktopDragStripHeight,
+          child: DragToMoveArea(child: Container(color: Colors.transparent)),
+        ),
+      ],
+    );
   }
 }
 

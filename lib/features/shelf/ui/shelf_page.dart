@@ -14,6 +14,11 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 class ShelfPage extends HookConsumerWidget {
   const ShelfPage({super.key});
 
+  static const _addTierSheetAnimationStyle = AnimationStyle(
+    duration: Duration(milliseconds: 100),
+    reverseDuration: Duration(milliseconds: 90),
+  );
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tiersAsync = ref.watch(shelfTierListProvider);
@@ -64,6 +69,7 @@ class ShelfPage extends HookConsumerWidget {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      sheetAnimationStyle: _addTierSheetAnimationStyle,
       builder: (context) => Padding(
         padding: EdgeInsets.only(
           left: 24,
