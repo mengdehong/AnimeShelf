@@ -109,6 +109,7 @@ class _SearchResultTile extends ConsumerWidget {
               ? Image.network(
                   posterUrl,
                   fit: BoxFit.cover,
+                  cacheWidth: 144,
                   errorBuilder: (_, _, _) => Container(
                     color: Theme.of(
                       context,

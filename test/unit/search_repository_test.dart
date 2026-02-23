@@ -178,6 +178,25 @@ void main() {
   });
 
   group('cacheSubject', () {
+    test('prefers medium poster URL for shelf thumbnails', () async {
+      const subject = BangumiSubject(
+        id: 7,
+        name: 'Sample',
+        images: BangumiImages(
+          large: 'https://example.com/large.jpg',
+          medium: 'https://example.com/medium.jpg',
+          small: 'https://example.com/small.jpg',
+        ),
+      );
+
+      await repo.cacheSubject(subject);
+
+      final cached = await (db.select(
+        db.subjects,
+      )..where((s) => s.subjectId.equals(7))).getSingle();
+      expect(cached.posterUrl, equals('https://example.com/medium.jpg'));
+    });
+
     test('inserts subject into database', () async {
       const subject = BangumiSubject(
         id: 42,

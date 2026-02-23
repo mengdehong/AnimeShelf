@@ -15,8 +15,14 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 class TierSection extends HookConsumerWidget {
   final int index;
   final Tier tier;
+  final List<EntryWithSubject> entries;
 
-  const TierSection({super.key, required this.index, required this.tier});
+  const TierSection({
+    super.key,
+    required this.index,
+    required this.tier,
+    required this.entries,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -26,38 +32,15 @@ class TierSection extends HookConsumerWidget {
     final sectionRadius = metrics?.sectionRadius ?? 16;
     final posterRadius = metrics?.posterRadius ?? 12;
     final cardColor = theme.cardTheme.color;
-    final entriesAsync = ref.watch(tierEntriesProvider(tier.id));
 
-    return entriesAsync.when(
-      loading: () => _buildTierContainer(
-        context: context,
-        ref: ref,
-        entries: const [],
-        tierColor: tierColor,
-        cardColor: cardColor,
-        sectionRadius: sectionRadius,
-        posterRadius: posterRadius,
-        isLoading: true,
-      ),
-      error: (error, stackTrace) => _buildTierContainer(
-        context: context,
-        ref: ref,
-        entries: const [],
-        tierColor: tierColor,
-        cardColor: cardColor,
-        sectionRadius: sectionRadius,
-        posterRadius: posterRadius,
-        errorText: 'Failed to load entries',
-      ),
-      data: (entries) => _buildTierContainer(
-        context: context,
-        ref: ref,
-        entries: entries,
-        tierColor: tierColor,
-        cardColor: cardColor,
-        sectionRadius: sectionRadius,
-        posterRadius: posterRadius,
-      ),
+    return _buildTierContainer(
+      context: context,
+      ref: ref,
+      entries: entries,
+      tierColor: tierColor,
+      cardColor: cardColor,
+      sectionRadius: sectionRadius,
+      posterRadius: posterRadius,
     );
   }
 
@@ -69,8 +52,6 @@ class TierSection extends HookConsumerWidget {
     required Color? cardColor,
     required double sectionRadius,
     required double posterRadius,
-    bool isLoading = false,
-    String? errorText,
   }) {
     return DragTarget<_EntryDragData>(
       onWillAcceptWithDetails: (details) => true,
@@ -125,25 +106,7 @@ class TierSection extends HookConsumerWidget {
                   );
                 },
               ),
-              if (isLoading)
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              else if (errorText != null)
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 24,
-                  ),
-                  child: Center(
-                    child: Text(
-                      errorText,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ),
-                )
-              else if (entries.isEmpty)
+              if (entries.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,

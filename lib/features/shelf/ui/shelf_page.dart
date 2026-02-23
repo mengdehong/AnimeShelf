@@ -1,7 +1,7 @@
-import 'package:anime_shelf/core/database/app_database.dart';
 import 'package:anime_shelf/core/theme/app_theme.dart';
 import 'package:anime_shelf/core/utils/rank_utils.dart';
 import 'package:anime_shelf/core/window/fused_app_bar.dart';
+import 'package:anime_shelf/features/shelf/data/shelf_repository.dart';
 import 'package:anime_shelf/features/shelf/providers/shelf_provider.dart';
 import 'package:anime_shelf/features/shelf/ui/tier_section.dart';
 import 'package:flutter/material.dart';
@@ -21,7 +21,7 @@ class ShelfPage extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final tiersAsync = ref.watch(shelfTierListProvider);
+    final tiersAsync = ref.watch(shelfTiersProvider);
 
     return Scaffold(
       appBar: FusedAppBar(
@@ -149,7 +149,7 @@ class ShelfPage extends HookConsumerWidget {
 
 /// Inner scrollable content showing all tier sections.
 class _ShelfContent extends HookConsumerWidget {
-  final List<Tier> tiers;
+  final List<TierWithEntries> tiers;
 
   const _ShelfContent({required this.tiers});
 
@@ -162,11 +162,10 @@ class _ShelfContent extends HookConsumerWidget {
     final metrics = Theme.of(context).extension<AppThemeMetrics>();
     final sectionRadius = metrics?.sectionRadius ?? 16;
 
-    return ReorderableListView.builder(
+    return ReorderableListView(
       padding: const EdgeInsets.only(bottom: 16),
       buildDefaultDragHandles: false,
       cacheExtent: 600,
-      itemCount: tiers.length,
       onReorder: (oldIndex, newIndex) =>
           _onReorderTier(ref, oldIndex, newIndex),
       proxyDecorator: (child, index, animation) {
@@ -180,13 +179,19 @@ class _ShelfContent extends HookConsumerWidget {
           child: child,
         );
       },
-      itemBuilder: (context, index) {
-        final tier = tiers[index];
+      children: tiers.asMap().entries.map((e) {
+        final index = e.key;
+        final tierData = e.value;
+        final tier = tierData.tier;
         return RepaintBoundary(
           key: ValueKey(tier.id),
-          child: TierSection(index: index, tier: tier),
+          child: TierSection(
+            index: index,
+            tier: tier,
+            entries: tierData.entries,
+          ),
         );
-      },
+      }).toList(),
     );
   }
 
@@ -198,19 +203,19 @@ class _ShelfContent extends HookConsumerWidget {
       return;
     }
 
-    final tier = tiers[oldIndex];
+    final tier = tiers[oldIndex].tier;
 
     // Calculate the actual prev/next based on movement direction
     final double? actualPrev;
     final double? actualNext;
     if (oldIndex < newIndex) {
-      actualPrev = tiers[newIndex].tierSort;
+      actualPrev = tiers[newIndex].tier.tierSort;
       actualNext = newIndex + 1 < tiers.length
-          ? tiers[newIndex + 1].tierSort
+          ? tiers[newIndex + 1].tier.tierSort
           : null;
     } else {
-      actualPrev = newIndex > 0 ? tiers[newIndex - 1].tierSort : null;
-      actualNext = tiers[newIndex].tierSort;
+      actualPrev = newIndex > 0 ? tiers[newIndex - 1].tier.tierSort : null;
+      actualNext = tiers[newIndex].tier.tierSort;
     }
 
     final newSort = RankUtils.insertRank(actualPrev, actualNext);

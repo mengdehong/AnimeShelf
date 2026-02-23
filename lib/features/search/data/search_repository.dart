@@ -63,13 +63,29 @@ class SearchRepository {
             subjectId: Value(subject.id),
             nameCn: Value(subject.nameCn),
             nameJp: Value(subject.name),
-            posterUrl: Value(subject.images?.large ?? ''),
+            posterUrl: Value(_thumbnailPosterUrl(subject.images)),
             airDate: Value(subject.airDate),
             eps: Value(subject.eps),
             rating: Value(subject.rating?.score ?? 0.0),
             summary: Value(subject.summary),
           ),
         );
+  }
+
+  String _thumbnailPosterUrl(BangumiImages? images) {
+    if (images == null) {
+      return '';
+    }
+    if (images.medium.isNotEmpty) {
+      return images.medium;
+    }
+    if (images.small.isNotEmpty) {
+      return images.small;
+    }
+    if (images.grid.isNotEmpty) {
+      return images.grid;
+    }
+    return images.large;
   }
 
   /// Refreshes a cached subject from the API.

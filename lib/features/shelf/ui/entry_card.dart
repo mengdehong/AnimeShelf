@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:anime_shelf/core/theme/app_theme.dart';
 import 'package:anime_shelf/features/shelf/data/shelf_repository.dart';
 import 'package:cached_network_image/cached_network_image.dart';
