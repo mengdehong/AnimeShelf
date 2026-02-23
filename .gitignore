@@ -31,6 +31,7 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+/dist/
 /coverage/
 
 # Symbolication related
@@ -43,3 +44,17 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Android release signing
+/android/key.properties
+/android/upload-keystore.jks
+*.jks
+
+# AUR local build artifacts
+/linux/packaging/aur/animeshelf/pkg/
+/linux/packaging/aur/animeshelf/src/
+/linux/packaging/aur/animeshelf/*.pkg.tar.zst
+/linux/packaging/aur/animeshelf/*.pkg.tar.zst.sig
+
+# Local act simulation files
+/.github/act/
