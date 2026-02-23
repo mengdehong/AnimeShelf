@@ -70,7 +70,7 @@
 
 * **原生备份**：导出/导入`.json`（或专属后缀`.animeshelf`）全量数据。
 * **表格导出**：导出 CSV 格式（含评级、番名、评分、本地长评论），方便 Excel 处理。
-* **文档导出**：Markdown 导出，采用优雅的“大纲+引用”策略排版，适合一键分享到博客。
+* **文档导出**：纯文本（`.txt`）导出，格式贴近纯文本导入（分组标题 + 每行一条目），便于直接复制回导入。
 * **导出范围**：默认全量导出（后续如体验更好可增加筛选导出）。
 
 ### 5. 视觉与主题引擎 (Design & Theming)
@@ -123,7 +123,7 @@
 │   │   ├── providers.g.dart                           # Generated
 │   │   └── utils/
 │   │       ├── rank_utils.dart                        # insertRank, needsRecompression, recompressRanks
-│   │       └── export_service.dart                    # JSON/CSV/MD export + JSON import
+│   │       └── export_service.dart                    # JSON/CSV/TXT export + JSON import
 │   ├── models/
 │   │   ├── tier.dart                                  # Drift Tiers table
 │   │   ├── subject.dart                               # Drift Subjects table (custom PK: subjectId)

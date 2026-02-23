@@ -19,7 +19,7 @@ AnimeShelf 是一款基于 Flutter 的本地优先番剧分级管理应用。
 - 分级书架：支持 Tier 区块排序、卡片同级排序、跨级拖拽。
 - Bangumi 搜索：支持关键词检索，骨架屏过渡与本地缓存。
 - 详情页：Hero 动画 + 毛玻璃信息层，支持本地私密笔记。
-- 导出/导入：支持 JSON（`.animeshelf`）、CSV、Markdown。
+- 导出/导入：支持 JSON（`.animeshelf`）、CSV、纯文本（`.txt`）。
 - 主题切换：樱花粉、B 站红、深色主题。
 - 本地优先：基于 Drift/SQLite，离线可浏览已收录内容。
 

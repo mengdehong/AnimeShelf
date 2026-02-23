@@ -167,30 +167,49 @@ void main() {
     });
   });
 
-  group('exportMarkdown', () {
-    test('starts with heading', () async {
-      final md = await exportService.exportMarkdown();
-      expect(md, startsWith('# AnimeShelf Export'));
+  group('exportPlainText', () {
+    test('returns empty text when shelf has no entries', () async {
+      final text = await exportService.exportPlainText();
+      expect(text, isEmpty);
     });
 
-    test('includes tier headings', () async {
-      final md = await exportService.exportMarkdown();
-      expect(md, contains('## '));
-      expect(md, contains('Inbox'));
-    });
-
-    test('includes entries with rating', () async {
+    test('includes tier header and entry title lines', () async {
       await seedTestData();
-      final md = await exportService.exportMarkdown();
-      expect(md, contains('**Steins;Gate**'));
-      expect(md, contains('2011'));
-      expect(md, contains('9.1/10'));
+      final text = await exportService.exportPlainText();
+      final lines = text.trim().split('\n');
+
+      expect(lines.first, equals('S'));
+      expect(lines, contains('Steins;Gate'));
     });
 
-    test('includes notes as blockquotes', () async {
+    test('falls back to original title when CN title is empty', () async {
+      await db
+          .into(db.subjects)
+          .insert(
+            SubjectsCompanion.insert(
+              subjectId: const Value(555),
+              nameCn: const Value(''),
+              nameJp: const Value('シュタインズ・ゲート'),
+            ),
+          );
+
+      final tiers = await db.select(db.tiers).get();
+      final tierA = tiers.firstWhere((tier) => tier.name == 'A');
+      await shelfRepo.createEntry(subjectId: 555, tierId: tierA.id);
+
+      final text = await exportService.exportPlainText();
+      expect(text, contains('A\n'));
+      expect(text, contains('シュタインズ・ゲート'));
+    });
+
+    test('does not include markdown syntax or note lines', () async {
       await seedTestData();
-      final md = await exportService.exportMarkdown();
-      expect(md, contains('> Masterpiece!'));
+      final text = await exportService.exportPlainText();
+
+      expect(text, isNot(contains('# ')));
+      expect(text, isNot(contains('**')));
+      expect(text, isNot(contains('> ')));
+      expect(text, isNot(contains('Masterpiece!')));
     });
   });
 
