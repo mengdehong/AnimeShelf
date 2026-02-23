@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:anime_shelf/core/database/app_database.dart';
 import 'package:anime_shelf/features/details/providers/details_provider.dart';
 import 'package:anime_shelf/features/shelf/providers/shelf_provider.dart';
@@ -11,8 +9,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 /// Immersive detail page for an entry.
 ///
-/// Features a full-bleed poster with glassmorphism overlay,
-/// metadata display, and a private notes editor.
+/// Features a large poster header, metadata display,
+/// and a private notes editor.
 class DetailsPage extends HookConsumerWidget {
   final int entryId;
 
@@ -75,9 +73,9 @@ class _DetailsContent extends HookConsumerWidget {
 
     return CustomScrollView(
       slivers: [
-        // Full-bleed poster with glassmorphism
+        // Large poster header
         SliverAppBar(
-          expandedHeight: MediaQuery.of(context).size.height * 0.45,
+          expandedHeight: MediaQuery.of(context).size.height * 0.75,
           pinned: true,
           leading: Padding(
             padding: const EdgeInsets.all(8.0),
@@ -148,60 +146,13 @@ class _DetailsContent extends HookConsumerWidget {
                   child: posterUrl.isNotEmpty
                       ? CachedNetworkImage(
                           imageUrl: posterUrl,
-                          fit: BoxFit.cover,
+                          fit: BoxFit.contain,
                         )
                       : Container(
                           color: Theme.of(
                             context,
                           ).colorScheme.surfaceContainerHighest,
                         ),
-                ),
-                // Glassmorphism overlay
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: ClipRect(
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.black.withValues(alpha: 0.0),
-                              Colors.black.withValues(alpha: 0.6),
-                            ],
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              title,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            if (originalTitle.isNotEmpty &&
-                                originalTitle != title)
-                              Text(
-                                originalTitle,
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.8),
-                                  fontSize: 14,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
                 ),
               ],
             ),
@@ -215,6 +166,24 @@ class _DetailsContent extends HookConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (originalTitle.isNotEmpty && originalTitle != title) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    originalTitle,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.75),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
                 // Info chips
                 Wrap(
                   spacing: 8,

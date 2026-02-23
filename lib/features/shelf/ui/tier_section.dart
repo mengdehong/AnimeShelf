@@ -37,6 +37,10 @@ class TierSection extends HookConsumerWidget {
     return DragTarget<_EntryDragData>(
       onWillAcceptWithDetails: (details) => true,
       onAcceptWithDetails: (details) {
+        // Only append to the end if it's coming from a different tier.
+        // If it's from the same tier and drops on the general background,
+        // we ignore it to prevent accidental sorting to the end.
+        if (details.data.sourceTierId == tierData.tier.id) return;
         _handleDrop(ref, details.data, entries.length);
       },
       builder: (context, candidateData, rejectedData) {
@@ -148,6 +152,7 @@ class TierSection extends HookConsumerWidget {
 
     return LongPressDraggable<_EntryDragData>(
       data: dragData,
+      delay: const Duration(milliseconds: 300),
       feedback: Material(
         elevation: 8,
         borderRadius: BorderRadius.circular(posterRadius),
