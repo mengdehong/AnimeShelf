@@ -8,6 +8,15 @@ import 'package:drift_flutter/drift_flutter.dart';
 part 'app_database.g.dart';
 
 const _defaultRankTierNames = <String>{'sss', 'ss', 's', 'a', 'b', 'c', 'd'};
+const _defaultRankTierSortByName = <String, double>{
+  'sss': 1000.0,
+  'ss': 2000.0,
+  's': 3000.0,
+  'a': 4000.0,
+  'b': 5000.0,
+  'c': 6000.0,
+  'd': 7000.0,
+};
 const _defaultInboxSort = 8000.0;
 
 class _DefaultTierSeed {
@@ -87,7 +96,7 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'anime_shelf'));
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration {
@@ -113,8 +122,35 @@ class AppDatabase extends _$AppDatabase {
         if (from < 6) {
           await _moveInboxToBottom();
         }
+        if (from < 7) {
+          await _normalizeDefaultTierOrderForV7();
+        }
       },
     );
+  }
+
+  /// v7 migration: normalize default tier order to
+  /// SSS > SS > S > A > B > C > D > Inbox.
+  Future<void> _normalizeDefaultTierOrderForV7() async {
+    final currentTiers = await select(tiers).get();
+
+    await batch((batch) {
+      for (final tier in currentTiers) {
+        final targetSort = tier.isInbox
+            ? _defaultInboxSort
+            : _defaultRankTierSortByName[tier.name.trim().toLowerCase()];
+
+        if (targetSort == null || tier.tierSort == targetSort) {
+          continue;
+        }
+
+        batch.update(
+          tiers,
+          TiersCompanion(tierSort: Value(targetSort)),
+          where: (tbl) => tbl.id.equals(tier.id),
+        );
+      }
+    });
   }
 
   /// v6 migration: move Inbox tier below ranked tiers by default.

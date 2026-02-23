@@ -20,20 +20,20 @@ void main() {
   });
 
   group('Tier operations', () {
-    test('seed creates 8 default tiers', () async {
+    test('seed creates 8 default tiers with Inbox at the bottom', () async {
       final tiers = await (db.select(
         db.tiers,
       )..orderBy([(t) => OrderingTerm.asc(t.tierSort)])).get();
       expect(tiers.length, equals(8));
-      expect(tiers[0].name, equals('Inbox'));
-      expect(tiers[0].isInbox, isTrue);
-      expect(tiers[1].name, equals('SSS'));
-      expect(tiers[2].name, equals('SS'));
-      expect(tiers[3].name, equals('S'));
-      expect(tiers[4].name, equals('A'));
-      expect(tiers[5].name, equals('B'));
-      expect(tiers[6].name, equals('C'));
-      expect(tiers[7].name, equals('D'));
+      expect(tiers[0].name, equals('SSS'));
+      expect(tiers[1].name, equals('SS'));
+      expect(tiers[2].name, equals('S'));
+      expect(tiers[3].name, equals('A'));
+      expect(tiers[4].name, equals('B'));
+      expect(tiers[5].name, equals('C'));
+      expect(tiers[6].name, equals('D'));
+      expect(tiers[7].name, equals('Inbox'));
+      expect(tiers[7].isInbox, isTrue);
     });
 
     test('addTier places new tier after the last one', () async {
@@ -43,7 +43,7 @@ void main() {
         colorValue: 0xFF00FF00,
       );
       expect(newTier.name, equals('C'));
-      expect(newTier.tierSort, greaterThan(7000.0));
+      expect(newTier.tierSort, greaterThan(8000.0));
     });
 
     test('updateTier changes name', () async {
