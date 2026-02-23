@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:anime_shelf/core/theme/app_theme.dart';
 import 'package:anime_shelf/features/shelf/data/shelf_repository.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -8,6 +10,9 @@ import 'package:flutter/material.dart';
 /// Uses [CachedNetworkImage] for offline-capable poster loading
 /// with a shimmer-like placeholder.
 class EntryCard extends StatelessWidget {
+  static const _posterCacheWidth = 330;
+  static const _posterCacheHeight = 480;
+
   final EntryWithSubject entryData;
   final VoidCallback onTap;
 
@@ -41,6 +46,10 @@ class EntryCard extends StatelessWidget {
                   fit: BoxFit.cover,
                   fadeInDuration: Duration.zero,
                   fadeOutDuration: Duration.zero,
+                  memCacheWidth: _posterCacheWidth,
+                  memCacheHeight: _posterCacheHeight,
+                  maxWidthDiskCache: _posterCacheWidth,
+                  maxHeightDiskCache: _posterCacheHeight,
                   placeholder: (context, url) => Container(
                     color: placeholderColor,
                     child: const Center(
@@ -68,9 +77,12 @@ class EntryCard extends StatelessWidget {
                 right: 0,
                 bottom: 0,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 4,
+                  width: double.infinity,
+                  padding: const EdgeInsets.only(
+                    left: 8,
+                    right: 8,
+                    bottom: 6,
+                    top: 24, // 增加顶部内边距让渐变更平滑
                   ),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -78,18 +90,51 @@ class EntryCard extends StatelessWidget {
                       end: Alignment.bottomCenter,
                       colors: [
                         Colors.transparent,
-                        Colors.black.withValues(alpha: 0.7),
+                        Colors.black.withValues(alpha: 0.8), // 底部较深的黑色遮罩
                       ],
+                      stops: const [0.0, 1.0],
                     ),
                   ),
                   child: Text(
                     title,
+                    textAlign: TextAlign.center,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
+                      color: Colors.white, // 纯白字体在深色渐变上最清晰
+                      fontSize: 12, // 稍微调大一点点字体
+                      fontWeight: FontWeight.w800, // 更粗的字体，增强辨识度
+                      height: 1.1,
+                      letterSpacing: 0.3,
+                      shadows: [
+                        // 外层描边效果 (多向小偏移阴影模拟描边)
+                        Shadow(
+                          color: Colors.black87,
+                          offset: Offset(-1, -1),
+                          blurRadius: 1,
+                        ),
+                        Shadow(
+                          color: Colors.black87,
+                          offset: Offset(1, -1),
+                          blurRadius: 1,
+                        ),
+                        Shadow(
+                          color: Colors.black87,
+                          offset: Offset(-1, 1),
+                          blurRadius: 1,
+                        ),
+                        Shadow(
+                          color: Colors.black87,
+                          offset: Offset(1, 1),
+                          blurRadius: 1,
+                        ),
+                        // 底部较宽的扩散阴影，增加质感
+                        Shadow(
+                          color: Colors.black,
+                          offset: Offset(0, 2),
+                          blurRadius: 4,
+                        ),
+                      ],
                     ),
                   ),
                 ),
