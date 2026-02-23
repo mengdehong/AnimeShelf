@@ -1,7 +1,7 @@
+import 'package:anime_shelf/core/database/app_database.dart';
 import 'package:anime_shelf/core/theme/app_theme.dart';
 import 'package:anime_shelf/core/utils/rank_utils.dart';
 import 'package:anime_shelf/core/window/fused_app_bar.dart';
-import 'package:anime_shelf/features/shelf/data/shelf_repository.dart';
 import 'package:anime_shelf/features/shelf/providers/shelf_provider.dart';
 import 'package:anime_shelf/features/shelf/ui/tier_section.dart';
 import 'package:flutter/material.dart';
@@ -16,7 +16,7 @@ class ShelfPage extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final tiersAsync = ref.watch(shelfTiersProvider);
+    final tiersAsync = ref.watch(shelfTierListProvider);
 
     return Scaffold(
       appBar: FusedAppBar(
@@ -143,7 +143,7 @@ class ShelfPage extends HookConsumerWidget {
 
 /// Inner scrollable content showing all tier sections.
 class _ShelfContent extends HookConsumerWidget {
-  final List<TierWithEntries> tiers;
+  final List<Tier> tiers;
 
   const _ShelfContent({required this.tiers});
 
@@ -175,10 +175,10 @@ class _ShelfContent extends HookConsumerWidget {
         );
       },
       itemBuilder: (context, index) {
-        final tierData = tiers[index];
+        final tier = tiers[index];
         return RepaintBoundary(
-          key: ValueKey(tierData.tier.id),
-          child: TierSection(index: index, tierData: tierData, allTiers: tiers),
+          key: ValueKey(tier.id),
+          child: TierSection(index: index, tier: tier),
         );
       },
     );
@@ -192,19 +192,19 @@ class _ShelfContent extends HookConsumerWidget {
       return;
     }
 
-    final tier = tiers[oldIndex].tier;
+    final tier = tiers[oldIndex];
 
     // Calculate the actual prev/next based on movement direction
     final double? actualPrev;
     final double? actualNext;
     if (oldIndex < newIndex) {
-      actualPrev = tiers[newIndex].tier.tierSort;
+      actualPrev = tiers[newIndex].tierSort;
       actualNext = newIndex + 1 < tiers.length
-          ? tiers[newIndex + 1].tier.tierSort
+          ? tiers[newIndex + 1].tierSort
           : null;
     } else {
-      actualPrev = newIndex > 0 ? tiers[newIndex - 1].tier.tierSort : null;
-      actualNext = tiers[newIndex].tier.tierSort;
+      actualPrev = newIndex > 0 ? tiers[newIndex - 1].tierSort : null;
+      actualNext = tiers[newIndex].tierSort;
     }
 
     final newSort = RankUtils.insertRank(actualPrev, actualNext);

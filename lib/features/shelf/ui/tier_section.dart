@@ -14,35 +14,71 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 /// across tiers. The header shows tier name, emoji, color, and actions.
 class TierSection extends HookConsumerWidget {
   final int index;
-  final TierWithEntries tierData;
-  final List<TierWithEntries> allTiers;
+  final Tier tier;
 
-  const TierSection({
-    super.key,
-    required this.index,
-    required this.tierData,
-    required this.allTiers,
-  });
+  const TierSection({super.key, required this.index, required this.tier});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final tier = tierData.tier;
-    final entries = tierData.entries;
     final tierColor = Color(tier.colorValue);
     final theme = Theme.of(context);
     final metrics = theme.extension<AppThemeMetrics>();
     final sectionRadius = metrics?.sectionRadius ?? 16;
     final posterRadius = metrics?.posterRadius ?? 12;
     final cardColor = theme.cardTheme.color;
+    final entriesAsync = ref.watch(tierEntriesProvider(tier.id));
 
+    return entriesAsync.when(
+      loading: () => _buildTierContainer(
+        context: context,
+        ref: ref,
+        entries: const [],
+        tierColor: tierColor,
+        cardColor: cardColor,
+        sectionRadius: sectionRadius,
+        posterRadius: posterRadius,
+        isLoading: true,
+      ),
+      error: (error, stackTrace) => _buildTierContainer(
+        context: context,
+        ref: ref,
+        entries: const [],
+        tierColor: tierColor,
+        cardColor: cardColor,
+        sectionRadius: sectionRadius,
+        posterRadius: posterRadius,
+        errorText: 'Failed to load entries',
+      ),
+      data: (entries) => _buildTierContainer(
+        context: context,
+        ref: ref,
+        entries: entries,
+        tierColor: tierColor,
+        cardColor: cardColor,
+        sectionRadius: sectionRadius,
+        posterRadius: posterRadius,
+      ),
+    );
+  }
+
+  Widget _buildTierContainer({
+    required BuildContext context,
+    required WidgetRef ref,
+    required List<EntryWithSubject> entries,
+    required Color tierColor,
+    required Color? cardColor,
+    required double sectionRadius,
+    required double posterRadius,
+    bool isLoading = false,
+    String? errorText,
+  }) {
     return DragTarget<_EntryDragData>(
       onWillAcceptWithDetails: (details) => true,
       onAcceptWithDetails: (details) {
-        // Only append to the end if it's coming from a different tier.
-        // If it's from the same tier and drops on the general background,
-        // we ignore it to prevent accidental sorting to the end.
-        if (details.data.sourceTierId == tierData.tier.id) return;
-        _handleDrop(ref, details.data, entries.length);
+        if (details.data.sourceTierId == tier.id) {
+          return;
+        }
+        _handleDrop(ref, details.data, entries, entries.length);
       },
       builder: (context, candidateData, rejectedData) {
         final isHovering = candidateData.isNotEmpty;
@@ -57,12 +93,15 @@ class TierSection extends HookConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               DragTarget<_EntryDragData>(
-                onWillAcceptWithDetails: (details) =>
-                    details.data.sourceTierId != tierData.tier.id ||
-                    entries.isNotEmpty &&
-                        details.data.entryId != entries.first.entry.id,
+                onWillAcceptWithDetails: (details) {
+                  if (details.data.sourceTierId != tier.id) {
+                    return true;
+                  }
+                  return entries.isNotEmpty &&
+                      details.data.entryId != entries.first.entry.id;
+                },
                 onAcceptWithDetails: (details) {
-                  _handleDrop(ref, details.data, 0);
+                  _handleDrop(ref, details.data, entries, 0);
                 },
                 builder: (context, candidateData, rejectedData) {
                   final isHoveringHeader = candidateData.isNotEmpty;
@@ -86,7 +125,25 @@ class TierSection extends HookConsumerWidget {
                   );
                 },
               ),
-              if (entries.isEmpty)
+              if (isLoading)
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (errorText != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 24,
+                  ),
+                  child: Center(
+                    child: Text(
+                      errorText,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                )
+              else if (entries.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -138,7 +195,7 @@ class TierSection extends HookConsumerWidget {
   ) {
     final dragData = _EntryDragData(
       entryId: entryData.entry.id,
-      sourceTierId: tierData.tier.id,
+      sourceTierId: tier.id,
     );
 
     return LongPressDraggable<_EntryDragData>(
@@ -159,8 +216,10 @@ class TierSection extends HookConsumerWidget {
       child: DragTarget<_EntryDragData>(
         onWillAcceptWithDetails: (details) => true,
         onAcceptWithDetails: (details) {
-          if (details.data.entryId == entryData.entry.id) return;
-          _handleDrop(ref, details.data, index);
+          if (details.data.entryId == entryData.entry.id) {
+            return;
+          }
+          _handleDrop(ref, details.data, entries, index);
         },
         builder: (context, candidateData, rejectedData) {
           return _EntryCardBox(
@@ -172,12 +231,15 @@ class TierSection extends HookConsumerWidget {
     );
   }
 
-  void _handleDrop(WidgetRef ref, _EntryDragData data, int targetIndex) {
-    final entries = tierData.entries;
-
+  void _handleDrop(
+    WidgetRef ref,
+    _EntryDragData data,
+    List<EntryWithSubject> entries,
+    int targetIndex,
+  ) {
     // Adjust the target index if we are moving the item backwards within the same tier
     int adjustedIndex = targetIndex;
-    if (data.sourceTierId == tierData.tier.id && targetIndex < entries.length) {
+    if (data.sourceTierId == tier.id && targetIndex < entries.length) {
       final sourceIndex = entries.indexWhere((e) => e.entry.id == data.entryId);
       if (sourceIndex != -1 && sourceIndex < targetIndex) {
         adjustedIndex = targetIndex + 1;
@@ -196,19 +258,18 @@ class TierSection extends HookConsumerWidget {
 
     repo.moveEntry(
       entryId: data.entryId,
-      targetTierId: tierData.tier.id,
+      targetTierId: tier.id,
       newRank: newRank,
     );
 
     if (prev != null &&
         next != null &&
         RankUtils.needsRecompression(prev, next)) {
-      repo.recompressEntryRanks(tierData.tier.id);
+      repo.recompressEntryRanks(tier.id);
     }
   }
 
   void _showEditDialog(BuildContext context, WidgetRef ref) {
-    final tier = tierData.tier;
     final nameController = TextEditingController(text: tier.name);
     final emojiController = TextEditingController(text: tier.emoji);
 
@@ -282,9 +343,7 @@ class TierSection extends HookConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Tier?'),
-        content: Text(
-          'Entries in "${tierData.tier.name}" will be moved to Inbox.',
-        ),
+        content: Text('Entries in "${tier.name}" will be moved to Inbox.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -292,7 +351,7 @@ class TierSection extends HookConsumerWidget {
           ),
           FilledButton(
             onPressed: () {
-              ref.read(shelfRepositoryProvider).deleteTier(tierData.tier.id);
+              ref.read(shelfRepositoryProvider).deleteTier(tier.id);
               Navigator.of(context).pop();
             },
             child: const Text('Delete'),

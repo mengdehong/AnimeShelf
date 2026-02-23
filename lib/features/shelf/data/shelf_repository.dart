@@ -25,6 +25,36 @@ class ShelfRepository {
 
   ShelfRepository(this._db);
 
+  /// Watches all tiers ordered by [tierSort].
+  Stream<List<Tier>> watchTiers() {
+    return (_db.select(
+      _db.tiers,
+    )..orderBy([(t) => OrderingTerm.asc(t.tierSort)])).watch();
+  }
+
+  /// Watches entries in a single tier ordered by [entryRank].
+  Stream<List<EntryWithSubject>> watchEntriesByTier(int tierId) {
+    final query =
+        (_db.select(_db.entries).join([
+            leftOuterJoin(
+              _db.subjects,
+              _db.subjects.subjectId.equalsExp(_db.entries.primarySubjectId),
+            ),
+          ])
+          ..where(_db.entries.tierId.equals(tierId))
+          ..orderBy([OrderingTerm.asc(_db.entries.entryRank)]));
+
+    return query.watch().map((rows) {
+      return rows
+          .map((row) {
+            final entry = row.readTable(_db.entries);
+            final subject = row.readTableOrNull(_db.subjects);
+            return EntryWithSubject(entry: entry, subject: subject);
+          })
+          .toList(growable: false);
+    });
+  }
+
   /// Watches all tiers ordered by [tierSort], each with its entries
   /// ordered by [entryRank].
   Stream<List<TierWithEntries>> watchTiersWithEntries() {

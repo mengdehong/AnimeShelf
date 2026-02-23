@@ -302,4 +302,53 @@ void main() {
       }
     });
   });
+
+  group('watchTiers', () {
+    test('emits tiers ordered by tierSort', () async {
+      final result = await repo.watchTiers().first;
+
+      expect(result.length, equals(4));
+      for (var i = 1; i < result.length; i++) {
+        expect(result[i].tierSort, greaterThan(result[i - 1].tierSort));
+      }
+    });
+  });
+
+  group('watchEntriesByTier', () {
+    test('emits entries ordered by rank with primary subject', () async {
+      await db
+          .into(db.subjects)
+          .insert(
+            SubjectsCompanion.insert(
+              subjectId: const Value(100),
+              nameCn: const Value('Anime A'),
+            ),
+          );
+      await db
+          .into(db.subjects)
+          .insert(
+            SubjectsCompanion.insert(
+              subjectId: const Value(200),
+              nameCn: const Value('Anime B'),
+            ),
+          );
+
+      final tiers = await db.select(db.tiers).get();
+      final tierS = tiers.firstWhere((t) => t.name == 'S');
+
+      final first = await repo.createEntry(subjectId: 100, tierId: tierS.id);
+      final second = await repo.createEntry(subjectId: 200, tierId: tierS.id);
+      await repo.moveEntry(
+        entryId: second.id,
+        targetTierId: tierS.id,
+        newRank: first.entryRank - 1,
+      );
+
+      final result = await repo.watchEntriesByTier(tierS.id).first;
+
+      expect(result.length, equals(2));
+      expect(result[0].subject?.nameCn, equals('Anime B'));
+      expect(result[1].subject?.nameCn, equals('Anime A'));
+    });
+  });
 }

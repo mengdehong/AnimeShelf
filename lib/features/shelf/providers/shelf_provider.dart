@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:anime_shelf/core/database/app_database.dart';
 import 'package:anime_shelf/core/providers.dart';
 import 'package:anime_shelf/features/shelf/data/shelf_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -17,4 +18,18 @@ ShelfRepository shelfRepository(ShelfRepositoryRef ref) {
 Stream<List<TierWithEntries>> shelfTiers(ShelfTiersRef ref) {
   final repo = ref.watch(shelfRepositoryProvider);
   return repo.watchTiersWithEntries();
+}
+
+/// Watches tier list only, ordered by tierSort.
+@riverpod
+Stream<List<Tier>> shelfTierList(ShelfTierListRef ref) {
+  final repo = ref.watch(shelfRepositoryProvider);
+  return repo.watchTiers();
+}
+
+/// Watches entries for one tier.
+@riverpod
+Stream<List<EntryWithSubject>> tierEntries(TierEntriesRef ref, int tierId) {
+  final repo = ref.watch(shelfRepositoryProvider);
+  return repo.watchEntriesByTier(tierId);
 }
