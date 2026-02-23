@@ -300,6 +300,21 @@ class ShelfRepository {
     }
   }
 
+  /// Deletes all entries and their subject associations, keeping tiers intact.
+  Future<void> deleteAllEntries() async {
+    try {
+      await _db.transaction(() async {
+        await _db.delete(_db.entrySubjects).go();
+        await _db.delete(_db.entries).go();
+      });
+    } catch (e) {
+      throw DatabaseException(
+        message: 'Failed to delete all entries',
+        originalError: e,
+      );
+    }
+  }
+
   /// Creates a new entry for a subject in the given tier.
   Future<Entry> createEntry({
     required int subjectId,

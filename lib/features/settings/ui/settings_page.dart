@@ -5,9 +5,11 @@ import 'package:anime_shelf/core/app_name_notifier.dart';
 import 'package:anime_shelf/core/theme/app_theme.dart';
 import 'package:anime_shelf/core/theme/theme_notifier.dart';
 import 'package:anime_shelf/core/utils/export_service.dart';
+import 'package:anime_shelf/core/utils/plain_text_import_report_formatter.dart';
 import 'package:anime_shelf/core/window/fused_app_bar.dart';
 import 'package:anime_shelf/core/window/window_settings_notifier.dart';
 import 'package:anime_shelf/features/settings/providers/settings_provider.dart';
+import 'package:anime_shelf/features/shelf/providers/shelf_provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -21,11 +23,37 @@ class SettingsPage extends HookConsumerWidget {
     final themeIndex = ref.watch(themeNotifierProvider);
     final hideTitleBar = ref.watch(windowSettingsNotifierProvider);
     final appName = ref.watch(appNameNotifierProvider);
+    final importTaskState = ref.watch(plainTextImportTaskProvider);
+    final importConcurrency = ref.watch(plainTextImportConcurrencyProvider);
 
     return Scaffold(
       appBar: const FusedAppBar(title: Text('Settings')),
+      bottomSheet: importTaskState.showPanel
+          ? _PlainTextImportBottomSheet(
+              state: importTaskState,
+              onCancel: () {
+                ref.read(plainTextImportTaskProvider.notifier).cancelImport();
+              },
+              onClose: () {
+                ref.read(plainTextImportTaskProvider.notifier).closePanel();
+              },
+              onViewReport: importTaskState.report == null
+                  ? null
+                  : () {
+                      _showPlainTextImportReport(
+                        context,
+                        importTaskState.report!,
+                      );
+                    },
+            )
+          : null,
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          importTaskState.showPanel ? 180 : 16,
+        ),
         children: [
           // ── Theme Section ──
           Text('Theme', style: Theme.of(context).textTheme.titleMedium),
@@ -121,6 +149,61 @@ class SettingsPage extends HookConsumerWidget {
             title: const Text('Paste Plain Text List'),
             subtitle: const Text('Paste text; one anime per line'),
             onTap: () => _importPlainText(context, ref),
+          ),
+          ListTile(
+            leading: const Icon(Icons.speed_outlined),
+            title: const Text('Plain Text Import Concurrency'),
+            subtitle: Text(
+              'Current: $importConcurrency '
+              '(range $plainTextImportMinConcurrency-'
+              '$plainTextImportMaxConcurrency)',
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Text('$plainTextImportMinConcurrency'),
+                Expanded(
+                  child: Slider(
+                    value: importConcurrency.toDouble(),
+                    min: plainTextImportMinConcurrency.toDouble(),
+                    max: plainTextImportMaxConcurrency.toDouble(),
+                    divisions:
+                        plainTextImportMaxConcurrency -
+                        plainTextImportMinConcurrency,
+                    label: '$importConcurrency',
+                    onChanged: (value) {
+                      ref
+                          .read(plainTextImportConcurrencyProvider.notifier)
+                          .setConcurrency(value.round());
+                    },
+                  ),
+                ),
+                Text('$plainTextImportMaxConcurrency'),
+              ],
+            ),
+          ),
+
+          const Divider(height: 32),
+
+          // ── Data Management Section ──
+          Text(
+            'Data Management',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          ListTile(
+            leading: Icon(
+              Icons.delete_sweep,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            title: Text(
+              'Clear All Entries',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+            subtitle: const Text('Deletes all entries; keeps tiers intact'),
+            onTap: () => _confirmClearAllEntries(context, ref),
           ),
         ],
       ),
@@ -320,11 +403,23 @@ class SettingsPage extends HookConsumerWidget {
         return;
       }
 
-      final exportService = ref.read(exportServiceProvider);
-      final report = await exportService.importPlainText(content);
-
       if (context.mounted) {
-        await _showPlainTextImportReport(context, report);
+        final started = ref
+            .read(plainTextImportTaskProvider.notifier)
+            .startImport(content);
+
+        if (!started) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Plain text import is already running'),
+            ),
+          );
+          return;
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Import started in background')),
+        );
       }
     } catch (e) {
       if (context.mounted) {
@@ -375,6 +470,54 @@ class SettingsPage extends HookConsumerWidget {
     return text;
   }
 
+  Future<void> _confirmClearAllEntries(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear All Entries?'),
+        content: const Text(
+          'This will permanently delete all entries from your shelf. '
+          'Your custom tiers will not be deleted.\n\nAre you sure?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Clear All'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) {
+      return;
+    }
+
+    try {
+      await ref.read(shelfRepositoryProvider).deleteAllEntries();
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('All entries cleared')));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to clear entries: $e')));
+      }
+    }
+  }
+
   Future<void> _showPlainTextImportReport(
     BuildContext context,
     PlainTextImportReport report,
@@ -384,7 +527,7 @@ class SettingsPage extends HookConsumerWidget {
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Plain Text Import Report'),
+        title: const Text('纯文本导入报告'),
         content: SizedBox(
           width: 560,
           child: SingleChildScrollView(child: SelectableText(message)),
@@ -400,51 +543,142 @@ class SettingsPage extends HookConsumerWidget {
   }
 
   String _buildPlainTextImportReportText(PlainTextImportReport report) {
-    final lines = <String>[
-      'Total lines: ${report.totalLines}',
-      'Imported: ${report.importedCount}',
-      'Tier headers detected: ${report.tierHeadersDetected}',
-      'Skipped empty lines: ${report.emptyLinesSkipped}',
-      'Skipped duplicates: ${report.duplicateSkipped}',
-      'Skipped no-result: ${report.noResultSkipped}',
-      'Skipped low-confidence: ${report.lowConfidenceSkipped}',
-    ];
+    return buildPlainTextImportReportText(report);
+  }
+}
 
-    if (report.unknownTierHeaders.isNotEmpty) {
-      lines
-        ..add('')
-        ..add('Unknown tier headers (routed to Inbox):')
-        ..addAll(report.unknownTierHeaders.map((name) => '- $name'));
+class _PlainTextImportBottomSheet extends StatelessWidget {
+  final PlainTextImportTaskState state;
+  final VoidCallback onCancel;
+  final VoidCallback onClose;
+  final VoidCallback? onViewReport;
+
+  const _PlainTextImportBottomSheet({
+    required this.state,
+    required this.onCancel,
+    required this.onClose,
+    required this.onViewReport,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final report = state.report;
+    final progress = state.progress;
+
+    final totalEntries = progress?.totalEntries ?? report?.totalEntries ?? 0;
+    final processedEntries =
+        progress?.processedEntries ?? report?.processedEntries ?? 0;
+    final importedCount = progress?.importedCount ?? report?.importedCount ?? 0;
+    final failedCount =
+        progress?.failedCount ??
+        ((report?.duplicateSkipped ?? 0) +
+            (report?.noResultSkipped ?? 0) +
+            (report?.lowConfidenceSkipped ?? 0));
+
+    var progressValue =
+        progress?.progress ??
+        (totalEntries == 0 ? 0.0 : (processedEntries / totalEntries));
+    progressValue = progressValue.clamp(0.0, 1.0).toDouble();
+    if (!state.isRunning && report != null && !report.cancelled) {
+      progressValue = 1.0;
     }
 
-    if (report.inboxFallbackEntries.isNotEmpty) {
-      lines
-        ..add('')
-        ..add('Imported to Inbox due to unknown tier header:')
-        ..addAll(report.inboxFallbackEntries.map((entry) => '- $entry'));
-    }
+    final title = _statusText(state);
 
-    if (report.lowConfidenceEntries.isNotEmpty) {
-      lines
-        ..add('')
-        ..add('Low-confidence matches skipped:')
-        ..addAll(report.lowConfidenceEntries.map((entry) => '- $entry'));
-    }
+    return Material(
+      elevation: 8,
+      child: SafeArea(
+        top: false,
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            border: Border(
+              top: BorderSide(color: Theme.of(context).dividerColor),
+            ),
+          ),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              LinearProgressIndicator(value: progressValue),
+              const SizedBox(height: 8),
+              Text(
+                'Processed: $processedEntries/$totalEntries  '
+                'Imported: $importedCount  '
+                'Skipped: $failedCount',
+              ),
+              if (progress != null && progress.currentItem.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'Current: ${progress.currentItem}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+              if (state.errorMessage != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  state.errorMessage!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ],
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  if (state.canCancel)
+                    TextButton.icon(
+                      onPressed: onCancel,
+                      icon: const Icon(Icons.close),
+                      label: const Text('Cancel Import'),
+                    ),
+                  if (onViewReport != null)
+                    OutlinedButton.icon(
+                      onPressed: onViewReport,
+                      icon: const Icon(Icons.receipt_long_outlined),
+                      label: const Text('View Report'),
+                    ),
+                  if (!state.isRunning)
+                    FilledButton.icon(
+                      onPressed: onClose,
+                      icon: const Icon(Icons.done),
+                      label: const Text('Close'),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-    if (report.noResultEntries.isNotEmpty) {
-      lines
-        ..add('')
-        ..add('No-result lines skipped:')
-        ..addAll(report.noResultEntries.map((entry) => '- $entry'));
+  String _statusText(PlainTextImportTaskState taskState) {
+    switch (taskState.status) {
+      case PlainTextImportTaskStatus.idle:
+        return 'Import idle';
+      case PlainTextImportTaskStatus.running:
+        final stage = taskState.progress?.stage;
+        if (stage == PlainTextImportStage.searching) {
+          return 'Searching Bangumi...';
+        }
+        if (stage == PlainTextImportStage.importing) {
+          return 'Importing entries...';
+        }
+        return 'Preparing import...';
+      case PlainTextImportTaskStatus.cancelling:
+        return 'Cancelling import...';
+      case PlainTextImportTaskStatus.completed:
+        return taskState.report?.cancelled == true
+            ? 'Import cancelled'
+            : 'Import completed';
+      case PlainTextImportTaskStatus.failed:
+        return 'Import failed';
     }
-
-    if (report.duplicateEntries.isNotEmpty) {
-      lines
-        ..add('')
-        ..add('Duplicate lines skipped:')
-        ..addAll(report.duplicateEntries.map((entry) => '- $entry'));
-    }
-
-    return lines.join('\n');
   }
 }

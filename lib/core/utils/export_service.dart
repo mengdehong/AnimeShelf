@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:anime_shelf/core/database/app_database.dart';
+import 'package:anime_shelf/core/exceptions/api_exception.dart';
 import 'package:anime_shelf/features/search/data/bangumi_subject.dart';
 import 'package:anime_shelf/features/search/data/search_repository.dart';
 import 'package:anime_shelf/features/shelf/data/shelf_repository.dart';
@@ -11,8 +12,78 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 /// Summary of a plain-text batch import.
+enum PlainTextImportStage {
+  preparing,
+  searching,
+  importing,
+  completed,
+  cancelled,
+}
+
+class PlainTextImportProgress {
+  final PlainTextImportStage stage;
+  final int totalEntries;
+  final int searchedEntries;
+  final int processedEntries;
+  final int importedCount;
+  final int failedCount;
+  final String currentItem;
+  final double progress;
+
+  const PlainTextImportProgress({
+    required this.stage,
+    required this.totalEntries,
+    required this.searchedEntries,
+    required this.processedEntries,
+    required this.importedCount,
+    required this.failedCount,
+    required this.currentItem,
+    required this.progress,
+  });
+}
+
+class PlainTextImportCancellationToken {
+  bool _isCancelled = false;
+
+  bool get isCancelled => _isCancelled;
+
+  void cancel() {
+    _isCancelled = true;
+  }
+}
+
+enum PlainTextImportLineStatus {
+  imported,
+  duplicateSkipped,
+  noResultSkipped,
+  lowConfidenceSkipped,
+  cancelled,
+}
+
+class PlainTextImportLineResult {
+  final int lineNumber;
+  final String input;
+  final PlainTextImportLineStatus status;
+  final String reason;
+  final String? matchedTitle;
+  final int? matchedSubjectId;
+  final List<String> candidateTitles;
+
+  const PlainTextImportLineResult({
+    required this.lineNumber,
+    required this.input,
+    required this.status,
+    required this.reason,
+    required this.matchedTitle,
+    required this.matchedSubjectId,
+    required this.candidateTitles,
+  });
+}
+
 class PlainTextImportReport {
   final int totalLines;
+  final int totalEntries;
+  final int processedEntries;
   final int emptyLinesSkipped;
   final int tierHeadersDetected;
   final int importedCount;
@@ -24,9 +95,15 @@ class PlainTextImportReport {
   final List<String> duplicateEntries;
   final List<String> noResultEntries;
   final List<String> lowConfidenceEntries;
+  final List<String> importedEntries;
+  final List<String> cancelledEntries;
+  final List<PlainTextImportLineResult> lineResults;
+  final bool cancelled;
 
   const PlainTextImportReport({
     required this.totalLines,
+    required this.totalEntries,
+    required this.processedEntries,
     required this.emptyLinesSkipped,
     required this.tierHeadersDetected,
     required this.importedCount,
@@ -38,6 +115,10 @@ class PlainTextImportReport {
     required this.duplicateEntries,
     required this.noResultEntries,
     required this.lowConfidenceEntries,
+    required this.importedEntries,
+    required this.cancelledEntries,
+    required this.lineResults,
+    required this.cancelled,
   });
 }
 
@@ -294,11 +375,18 @@ class ExportService {
   ///
   /// Uses Bangumi search Top1 only when confidence is high; low-confidence
   /// matches are skipped and included in the report.
-  Future<PlainTextImportReport> importPlainText(String text) async {
+  Future<PlainTextImportReport> importPlainText(
+    String text, {
+    int searchConcurrency = 6,
+    PlainTextImportCancellationToken? cancellationToken,
+    void Function(PlainTextImportProgress progress)? onProgress,
+  }) async {
     final searchRepo = _searchRepo;
     if (searchRepo == null) {
       throw StateError('Search repository is not configured for text import.');
     }
+
+    final cancelToken = cancellationToken ?? PlainTextImportCancellationToken();
 
     final tiers = await _db.select(_db.tiers).get();
     final inbox = tiers.firstWhere((tier) => tier.isInbox);
@@ -308,12 +396,16 @@ class ExportService {
     }
 
     final lines = text.split(RegExp(r'\r?\n'));
+    final importLines = <_PlainTextImportLine>[];
+    final effectiveConcurrency = searchConcurrency.clamp(4, 8).toInt();
 
     var currentTier = inbox;
     String? activeUnknownTierHeader;
 
     var emptyLinesSkipped = 0;
     var tierHeadersDetected = 0;
+    var searchedEntries = 0;
+    var processedEntries = 0;
     var importedCount = 0;
     var duplicateSkipped = 0;
     var noResultSkipped = 0;
@@ -325,8 +417,50 @@ class ExportService {
     final duplicateEntries = <String>[];
     final noResultEntries = <String>[];
     final lowConfidenceEntries = <String>[];
+    final importedEntries = <String>[];
+    final cancelledEntries = <String>[];
+    final lineResults = <PlainTextImportLineResult>[];
+    final processedLineNumbers = <int>{};
 
-    for (final rawLine in lines) {
+    void emitProgress(PlainTextImportStage stage, {String currentItem = ''}) {
+      if (onProgress == null) {
+        return;
+      }
+
+      final totalEntries = importLines.length;
+      final safeTotal = totalEntries == 0 ? 1 : totalEntries;
+      const searchWeight = 0.65;
+      const importWeight = 0.35;
+
+      final searchRatio = searchedEntries / safeTotal;
+      final importRatio = processedEntries / safeTotal;
+
+      var progressValue =
+          (searchRatio * searchWeight) + (importRatio * importWeight);
+      if (stage == PlainTextImportStage.completed) {
+        progressValue = 1.0;
+      }
+
+      onProgress(
+        PlainTextImportProgress(
+          stage: stage,
+          totalEntries: totalEntries,
+          searchedEntries: searchedEntries,
+          processedEntries: processedEntries,
+          importedCount: importedCount,
+          failedCount:
+              duplicateSkipped + noResultSkipped + lowConfidenceSkipped,
+          currentItem: currentItem,
+          progress: progressValue.clamp(0.0, 1.0).toDouble(),
+        ),
+      );
+    }
+
+    emitProgress(PlainTextImportStage.preparing);
+
+    for (var i = 0; i < lines.length; i++) {
+      final lineNumber = i + 1;
+      final rawLine = lines[i];
       final trimmed = rawLine.trim();
       if (trimmed.isEmpty) {
         emptyLinesSkipped += 1;
@@ -351,43 +485,227 @@ class ExportService {
         continue;
       }
 
-      final results = await searchRepo.searchSubjects(trimmed, limit: 5);
-      if (results.isEmpty) {
-        noResultSkipped += 1;
-        noResultEntries.add(trimmed);
-        continue;
-      }
+      importLines.add(
+        _PlainTextImportLine(
+          lineNumber: lineNumber,
+          query: trimmed,
+          tierId: currentTier.id,
+          unknownTierHeader: activeUnknownTierHeader,
+        ),
+      );
+    }
 
-      final top1 = results.first;
-      final confidence = _evaluateTop1Confidence(trimmed, top1, results);
-      if (!confidence.isHighConfidence) {
-        lowConfidenceSkipped += 1;
-        lowConfidenceEntries.add(
-          '$trimmed -> ${_displayTitle(top1)} (${confidence.reason})',
+    if (importLines.isNotEmpty) {
+      final existingRows = await _db.select(_db.entrySubjects).get();
+      final existingSubjectIds = existingRows
+          .map((row) => row.subjectId)
+          .toSet();
+
+      emitProgress(PlainTextImportStage.searching);
+
+      for (
+        var start = 0;
+        start < importLines.length;
+        start += effectiveConcurrency
+      ) {
+        if (cancelToken.isCancelled) {
+          break;
+        }
+
+        final end = min(start + effectiveConcurrency, importLines.length);
+        final chunk = importLines.sublist(start, end);
+
+        final chunkResolutions = await Future.wait(
+          chunk.map((line) async {
+            try {
+              final results = await searchRepo.searchSubjects(
+                line.query,
+                limit: 5,
+              );
+              return _resolveSearchLine(line, results);
+            } catch (error) {
+              return _SearchResolution.noResult(
+                line,
+                reason: _searchFailureReason(error),
+              );
+            } finally {
+              searchedEntries += 1;
+              emitProgress(
+                PlainTextImportStage.searching,
+                currentItem: line.query,
+              );
+            }
+          }),
         );
-        continue;
+
+        for (final resolution in chunkResolutions) {
+          final line = resolution.line;
+          if (cancelToken.isCancelled) {
+            break;
+          }
+
+          final candidateTitles = resolution.candidateTitles;
+
+          if (resolution.status == _SearchResolutionStatus.noResult) {
+            noResultSkipped += 1;
+            processedEntries += 1;
+            processedLineNumbers.add(line.lineNumber);
+
+            final reason = resolution.reason ?? 'no result from Bangumi search';
+            if (reason.startsWith('search request failed')) {
+              noResultEntries.add(
+                'L${line.lineNumber}: ${line.query} ($reason)',
+              );
+            } else {
+              noResultEntries.add('L${line.lineNumber}: ${line.query}');
+            }
+
+            lineResults.add(
+              PlainTextImportLineResult(
+                lineNumber: line.lineNumber,
+                input: line.query,
+                status: PlainTextImportLineStatus.noResultSkipped,
+                reason: reason,
+                matchedTitle: null,
+                matchedSubjectId: null,
+                candidateTitles: candidateTitles,
+              ),
+            );
+
+            emitProgress(
+              PlainTextImportStage.importing,
+              currentItem: line.query,
+            );
+            continue;
+          }
+
+          final top1 = resolution.top1;
+          if (resolution.status == _SearchResolutionStatus.lowConfidence ||
+              top1 == null) {
+            lowConfidenceSkipped += 1;
+            processedEntries += 1;
+            processedLineNumbers.add(line.lineNumber);
+
+            final displayTitle = top1 != null ? _displayTitle(top1) : 'Unknown';
+            final reason = resolution.reason ?? 'low confidence';
+            lowConfidenceEntries.add(
+              'L${line.lineNumber}: ${line.query} -> '
+              '$displayTitle ($reason)',
+            );
+
+            lineResults.add(
+              PlainTextImportLineResult(
+                lineNumber: line.lineNumber,
+                input: line.query,
+                status: PlainTextImportLineStatus.lowConfidenceSkipped,
+                reason: reason,
+                matchedTitle: top1 != null ? _displayTitle(top1) : null,
+                matchedSubjectId: top1?.id,
+                candidateTitles: candidateTitles,
+              ),
+            );
+
+            emitProgress(
+              PlainTextImportStage.importing,
+              currentItem: line.query,
+            );
+            continue;
+          }
+
+          final matchedTitle = _displayTitle(top1);
+          if (existingSubjectIds.contains(top1.id)) {
+            duplicateSkipped += 1;
+            processedEntries += 1;
+            processedLineNumbers.add(line.lineNumber);
+            duplicateEntries.add(
+              'L${line.lineNumber}: ${line.query} -> $matchedTitle',
+            );
+
+            lineResults.add(
+              PlainTextImportLineResult(
+                lineNumber: line.lineNumber,
+                input: line.query,
+                status: PlainTextImportLineStatus.duplicateSkipped,
+                reason: 'already exists in shelf',
+                matchedTitle: matchedTitle,
+                matchedSubjectId: top1.id,
+                candidateTitles: candidateTitles,
+              ),
+            );
+
+            emitProgress(
+              PlainTextImportStage.importing,
+              currentItem: line.query,
+            );
+            continue;
+          }
+
+          await searchRepo.cacheSubject(top1);
+          await _shelfRepo.createEntry(subjectId: top1.id, tierId: line.tierId);
+
+          existingSubjectIds.add(top1.id);
+          importedCount += 1;
+          processedEntries += 1;
+          processedLineNumbers.add(line.lineNumber);
+          importedEntries.add(
+            'L${line.lineNumber}: ${line.query} -> $matchedTitle',
+          );
+
+          lineResults.add(
+            PlainTextImportLineResult(
+              lineNumber: line.lineNumber,
+              input: line.query,
+              status: PlainTextImportLineStatus.imported,
+              reason: 'imported',
+              matchedTitle: matchedTitle,
+              matchedSubjectId: top1.id,
+              candidateTitles: candidateTitles,
+            ),
+          );
+
+          if (line.unknownTierHeader != null) {
+            inboxFallbackEntries.add(
+              'L${line.lineNumber}: ${line.query} -> '
+              'Inbox (unknown tier "${line.unknownTierHeader}")',
+            );
+          }
+
+          emitProgress(PlainTextImportStage.importing, currentItem: line.query);
+        }
       }
+    }
 
-      final exists = await _shelfRepo.subjectExists(top1.id);
-      if (exists) {
-        duplicateSkipped += 1;
-        duplicateEntries.add(trimmed);
-        continue;
-      }
+    if (cancelToken.isCancelled) {
+      for (final line in importLines) {
+        if (processedLineNumbers.contains(line.lineNumber)) {
+          continue;
+        }
 
-      await searchRepo.cacheSubject(top1);
-      await _shelfRepo.createEntry(subjectId: top1.id, tierId: currentTier.id);
-      importedCount += 1;
-
-      if (activeUnknownTierHeader != null) {
-        inboxFallbackEntries.add(
-          '$trimmed -> Inbox (unknown tier "$activeUnknownTierHeader")',
+        cancelledEntries.add('L${line.lineNumber}: ${line.query}');
+        lineResults.add(
+          PlainTextImportLineResult(
+            lineNumber: line.lineNumber,
+            input: line.query,
+            status: PlainTextImportLineStatus.cancelled,
+            reason: 'cancelled by user',
+            matchedTitle: null,
+            matchedSubjectId: null,
+            candidateTitles: const [],
+          ),
         );
       }
     }
 
+    emitProgress(
+      cancelToken.isCancelled
+          ? PlainTextImportStage.cancelled
+          : PlainTextImportStage.completed,
+    );
+
     return PlainTextImportReport(
       totalLines: lines.length,
+      totalEntries: importLines.length,
+      processedEntries: processedEntries,
       emptyLinesSkipped: emptyLinesSkipped,
       tierHeadersDetected: tierHeadersDetected,
       importedCount: importedCount,
@@ -399,7 +717,112 @@ class ExportService {
       duplicateEntries: duplicateEntries,
       noResultEntries: noResultEntries,
       lowConfidenceEntries: lowConfidenceEntries,
+      importedEntries: importedEntries,
+      cancelledEntries: cancelledEntries,
+      lineResults: lineResults,
+      cancelled: cancelToken.isCancelled,
     );
+  }
+
+  String _searchFailureReason(Object error) {
+    if (error is NetworkTimeoutException) {
+      return 'search request failed: timeout';
+    }
+    if (error is NoConnectionException) {
+      return 'search request failed: no internet connection';
+    }
+    if (error is ApiException) {
+      final statusCode = error.statusCode;
+      if (statusCode != null) {
+        return 'search request failed: api status $statusCode';
+      }
+      return 'search request failed: api error';
+    }
+    return 'search request failed';
+  }
+
+  _SearchResolution _resolveSearchLine(
+    _PlainTextImportLine line,
+    List<BangumiSubject> results,
+  ) {
+    if (results.isEmpty) {
+      return _SearchResolution.noResult(line);
+    }
+
+    BangumiSubject? bestSubject;
+    var highestScore = 0.0;
+    BangumiSubject? strongestSeasonMismatchSubject;
+    String? strongestSeasonMismatchReason;
+    var strongestSeasonMismatchScore = 0.0;
+
+    final searchLimit = min(results.length, 4);
+    for (var i = 0; i < searchLimit; i++) {
+      final candidate = results[i];
+      final score = _evaluateCandidateScore(line.query, candidate, i);
+      final mismatch = _seasonMismatchReason(line.query, candidate);
+      if (mismatch != null) {
+        if (score > strongestSeasonMismatchScore) {
+          strongestSeasonMismatchScore = score;
+          strongestSeasonMismatchSubject = candidate;
+          strongestSeasonMismatchReason = mismatch;
+        }
+        continue;
+      }
+
+      if (score > highestScore) {
+        highestScore = score;
+        bestSubject = candidate;
+      }
+    }
+
+    if (bestSubject == null) {
+      final mismatchSubject = strongestSeasonMismatchSubject;
+      final mismatchReason = strongestSeasonMismatchReason;
+      if (mismatchSubject != null && mismatchReason != null) {
+        return _SearchResolution.lowConfidence(
+          line,
+          mismatchSubject,
+          results,
+          mismatchReason,
+        );
+      }
+
+      final top1 = results.first;
+      return _SearchResolution.lowConfidence(
+        line,
+        top1,
+        results,
+        'no suitable match found',
+      );
+    }
+
+    // Threshold for accepting a match
+    if (highestScore < 0.78) {
+      final mismatchSubject = strongestSeasonMismatchSubject;
+      final mismatchReason = strongestSeasonMismatchReason;
+      final mismatchDominates =
+          mismatchSubject != null &&
+          mismatchReason != null &&
+          strongestSeasonMismatchScore >= 0.78 &&
+          strongestSeasonMismatchScore > (highestScore + 0.08);
+      if (mismatchDominates) {
+        return _SearchResolution.lowConfidence(
+          line,
+          mismatchSubject,
+          results,
+          mismatchReason,
+        );
+      }
+
+      return _SearchResolution.lowConfidence(
+        line,
+        bestSubject,
+        results,
+        'low confidence match (score: ${highestScore.toStringAsFixed(2)})',
+      );
+    }
+
+    return _SearchResolution.matched(line, bestSubject, results);
   }
 
   String _csvEscape(String value) {
@@ -439,50 +862,222 @@ class ExportService {
     return RegExp(r'^[SABCDEF][0-9]$').hasMatch(upper);
   }
 
-  _MatchConfidence _evaluateTop1Confidence(
+  String? _seasonMismatchReason(String query, BangumiSubject top1) {
+    final seasonNumber = _extractSeasonNumber(query);
+    if (seasonNumber == null || seasonNumber <= 1) {
+      return null;
+    }
+
+    final normalizedQuery = _normalizeForMatch(query);
+    final normalizedCn = _normalizeForMatch(top1.nameCn);
+    final normalizedName = _normalizeForMatch(top1.name);
+
+    final isDirectTitleMatch =
+        normalizedQuery == normalizedCn || normalizedQuery == normalizedName;
+    if (isDirectTitleMatch) {
+      return null;
+    }
+
+    final hasSeasonToken =
+        _containsSeasonToken(normalizedCn, seasonNumber) ||
+        _containsSeasonToken(normalizedName, seasonNumber);
+    if (hasSeasonToken) {
+      return null;
+    }
+
+    return 'season indicator mismatch (wanted season $seasonNumber)';
+  }
+
+  int? _extractSeasonNumber(String query) {
+    final compact = query.toLowerCase().replaceAll(RegExp(r'\s+'), '');
+
+    final explicitArabic = RegExp(r'第([0-9]{1,2})[季期部篇章]').firstMatch(compact);
+    if (explicitArabic != null) {
+      return int.tryParse(explicitArabic.group(1) ?? '');
+    }
+
+    final explicitChinese = RegExp(
+      r'第([一二三四五六七八九十两]{1,3})[季期部篇章]',
+    ).firstMatch(compact);
+    if (explicitChinese != null) {
+      return _parseChineseNumber(explicitChinese.group(1) ?? '');
+    }
+
+    final seasonEnglish = RegExp(r'season([0-9]{1,2})').firstMatch(compact);
+    if (seasonEnglish != null) {
+      return int.tryParse(seasonEnglish.group(1) ?? '');
+    }
+
+    final suffixNumber = RegExp(r'([0-9]{1,2})$').firstMatch(compact);
+    if (suffixNumber == null) {
+      return null;
+    }
+
+    final parsed = int.tryParse(suffixNumber.group(1) ?? '');
+    final hasCjk = RegExp(r'[\u4e00-\u9fff]').hasMatch(compact);
+    if (!hasCjk || parsed == null || parsed < 2 || parsed > 9) {
+      return null;
+    }
+
+    return parsed;
+  }
+
+  int? _parseChineseNumber(String value) {
+    const map = {
+      '零': 0,
+      '一': 1,
+      '二': 2,
+      '两': 2,
+      '三': 3,
+      '四': 4,
+      '五': 5,
+      '六': 6,
+      '七': 7,
+      '八': 8,
+      '九': 9,
+      '十': 10,
+    };
+
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+
+    if (trimmed == '十') {
+      return 10;
+    }
+
+    if (trimmed.contains('十')) {
+      final parts = trimmed.split('十');
+      final tensPart = parts.first;
+      final onesPart = parts.length > 1 ? parts.last : '';
+
+      final tens = tensPart.isEmpty ? 1 : map[tensPart];
+      final ones = onesPart.isEmpty ? 0 : map[onesPart];
+
+      if (tens == null || ones == null) {
+        return null;
+      }
+      return (tens * 10) + ones;
+    }
+
+    return map[trimmed];
+  }
+
+  String _toChineseSeasonNumber(int value) {
+    const digits = {
+      0: '零',
+      1: '一',
+      2: '二',
+      3: '三',
+      4: '四',
+      5: '五',
+      6: '六',
+      7: '七',
+      8: '八',
+      9: '九',
+      10: '十',
+    };
+
+    if (value <= 10) {
+      return digits[value] ?? value.toString();
+    }
+    if (value < 20) {
+      return '十${digits[value - 10] ?? ''}';
+    }
+    if (value == 20) {
+      return '二十';
+    }
+    return value.toString();
+  }
+
+  bool _containsSeasonToken(String normalizedTitle, int seasonNumber) {
+    if (normalizedTitle.isEmpty) {
+      return false;
+    }
+
+    final arabic = seasonNumber.toString();
+    final chinese = _toChineseSeasonNumber(seasonNumber);
+
+    final rawTokens = <String>[
+      '第$arabic季',
+      '第$arabic期',
+      '第$arabic部',
+      '第$arabic篇',
+      '$arabic季',
+      '$arabic期',
+      '$arabic部',
+      '$arabic篇',
+      'season$arabic',
+      's$arabic',
+      '第$chinese季',
+      '第$chinese期',
+      '第$chinese部',
+      '第$chinese篇',
+      '$chinese季',
+      '$chinese期',
+      '$chinese部',
+      '$chinese篇',
+    ];
+
+    for (final token in rawTokens) {
+      final normalizedToken = _normalizeForMatch(token);
+      if (normalizedToken.isNotEmpty &&
+          normalizedTitle.contains(normalizedToken)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  double _evaluateCandidateScore(
     String query,
-    BangumiSubject top1,
-    List<BangumiSubject> results,
+    BangumiSubject candidate,
+    int rankIndex,
   ) {
     final normalizedQuery = _normalizeForMatch(query);
     if (normalizedQuery.isEmpty) {
-      return const _MatchConfidence.low('empty query');
+      return 0.0;
     }
 
-    final top1Score = _bestSimilarity(normalizedQuery, top1);
-    final top1Exact = _isExactMatch(normalizedQuery, top1);
-    final top1Contains = _isContainsMatch(normalizedQuery, top1);
+    final textScore = _bestSimilarity(normalizedQuery, candidate);
+    final isExact = _isExactMatch(normalizedQuery, candidate);
+    final isContains = _isContainsMatch(normalizedQuery, candidate);
 
-    var top2Score = 0.0;
-    if (results.length > 1) {
-      top2Score = _bestSimilarity(normalizedQuery, results[1]);
+    final votes = candidate.rating?.total ?? 0;
+    var popBoost = 0.0;
+    if (votes > 500) popBoost += 0.05;
+    if (votes > 2000) popBoost += 0.05;
+    if (votes > 10000) popBoost += 0.05;
+
+    var rankBoost = 0.0;
+    if (rankIndex == 0) {
+      rankBoost = 0.15;
+    } else if (rankIndex == 1) {
+      rankBoost = 0.05;
     }
 
-    if (top1Exact) {
-      return const _MatchConfidence.high();
+    var score = textScore;
+    if (isExact) {
+      score = 1.0;
+    } else if (isContains && normalizedQuery.length >= 2) {
+      score = max(score, 0.70 + (textScore * 0.1));
     }
 
-    if (normalizedQuery.length <= 2) {
-      return const _MatchConfidence.low('query too short');
+    final hasCjk = RegExp(r'[\u4e00-\u9fff]').hasMatch(normalizedQuery);
+    final isAliasCandidate =
+        rankIndex == 0 &&
+        (hasCjk
+            ? (normalizedQuery.length >= 3 ||
+                  (normalizedQuery.length == 2 && votes >= 8000))
+            : normalizedQuery.length >= 4);
+
+    if (!isExact && !isContains && isAliasCandidate) {
+      score = max(score, 0.50 + (textScore * 0.5));
     }
 
-    final isTop1Strong =
-        top1Score >= 0.86 ||
-        (top1Contains && top1Score >= 0.72) ||
-        (top1Score >= 0.78 && top2Score <= top1Score - 0.12);
-
-    if (!isTop1Strong) {
-      return _MatchConfidence.low(
-        'low confidence ${top1Score.toStringAsFixed(2)}',
-      );
-    }
-
-    final isAmbiguous = top2Score >= 0.75 && top2Score >= (top1Score - 0.05);
-    if (isAmbiguous) {
-      return const _MatchConfidence.low('ambiguous with close alternatives');
-    }
-
-    return const _MatchConfidence.high();
+    return score + popBoost + rankBoost;
   }
 
   double _bestSimilarity(String normalizedQuery, BangumiSubject subject) {
@@ -592,17 +1187,91 @@ class ExportService {
   }
 }
 
-class _MatchConfidence {
-  final bool isHighConfidence;
-  final String reason;
+class _PlainTextImportLine {
+  final int lineNumber;
+  final String query;
+  final int tierId;
+  final String? unknownTierHeader;
 
-  const _MatchConfidence._({
-    required this.isHighConfidence,
+  const _PlainTextImportLine({
+    required this.lineNumber,
+    required this.query,
+    required this.tierId,
+    required this.unknownTierHeader,
+  });
+}
+
+enum _SearchResolutionStatus { matched, noResult, lowConfidence }
+
+class _SearchResolution {
+  final _PlainTextImportLine line;
+  final _SearchResolutionStatus status;
+  final BangumiSubject? top1;
+  final String? reason;
+  final List<String> candidateTitles;
+
+  const _SearchResolution._({
+    required this.line,
+    required this.status,
+    required this.top1,
     required this.reason,
+    required this.candidateTitles,
   });
 
-  const _MatchConfidence.high() : this._(isHighConfidence: true, reason: 'ok');
+  factory _SearchResolution.noResult(
+    _PlainTextImportLine line, {
+    String reason = 'no result from Bangumi search',
+  }) {
+    return _SearchResolution._(
+      line: line,
+      status: _SearchResolutionStatus.noResult,
+      top1: null,
+      reason: reason,
+      candidateTitles: const [],
+    );
+  }
 
-  const _MatchConfidence.low(String reason)
-    : this._(isHighConfidence: false, reason: reason);
+  factory _SearchResolution.lowConfidence(
+    _PlainTextImportLine line,
+    BangumiSubject top1,
+    List<BangumiSubject> results,
+    String reason,
+  ) {
+    return _SearchResolution._(
+      line: line,
+      status: _SearchResolutionStatus.lowConfidence,
+      top1: top1,
+      reason: reason,
+      candidateTitles: _candidateTitles(results),
+    );
+  }
+
+  factory _SearchResolution.matched(
+    _PlainTextImportLine line,
+    BangumiSubject top1,
+    List<BangumiSubject> results,
+  ) {
+    return _SearchResolution._(
+      line: line,
+      status: _SearchResolutionStatus.matched,
+      top1: top1,
+      reason: null,
+      candidateTitles: _candidateTitles(results),
+    );
+  }
+
+  static List<String> _candidateTitles(List<BangumiSubject> results) {
+    return results
+        .take(3)
+        .map((subject) {
+          if (subject.nameCn.isNotEmpty) {
+            return '${subject.nameCn} (#${subject.id})';
+          }
+          if (subject.name.isNotEmpty) {
+            return '${subject.name} (#${subject.id})';
+          }
+          return '#${subject.id}';
+        })
+        .toList(growable: false);
+  }
 }

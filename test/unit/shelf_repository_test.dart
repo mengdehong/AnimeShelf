@@ -292,6 +292,36 @@ void main() {
       expect(sTier.entries[0].subject?.nameCn, equals('Anime A'));
     });
 
+    test(
+      'deleteAllEntries removes all entries and junction records, keeps tiers',
+      () async {
+        final defaultTiers = await db.select(db.tiers).get();
+
+        await db
+            .into(db.subjects)
+            .insert(SubjectsCompanion.insert(subjectId: const Value(100)));
+        await db
+            .into(db.subjects)
+            .insert(SubjectsCompanion.insert(subjectId: const Value(101)));
+
+        await repo.createEntry(subjectId: 100, tierId: defaultTiers.first.id);
+        await repo.createEntry(subjectId: 101, tierId: defaultTiers.last.id);
+
+        var entries = await db.select(db.entries).get();
+        expect(entries.length, equals(2));
+
+        await repo.deleteAllEntries();
+
+        entries = await db.select(db.entries).get();
+        final junctions = await db.select(db.entrySubjects).get();
+        final tiers = await db.select(db.tiers).get();
+
+        expect(entries, isEmpty);
+        expect(junctions, isEmpty);
+        expect(tiers.length, equals(4));
+      },
+    );
+
     test('tiers are ordered by tierSort', () async {
       final result = await repo.watchTiersWithEntries().first;
       for (var i = 1; i < result.length; i++) {

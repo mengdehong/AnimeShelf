@@ -1,7 +1,10 @@
 import 'package:anime_shelf/core/database/app_database.dart';
 import 'package:anime_shelf/core/theme/app_theme.dart';
+import 'package:anime_shelf/core/utils/export_service.dart';
+import 'package:anime_shelf/core/utils/plain_text_import_report_formatter.dart';
 import 'package:anime_shelf/core/utils/rank_utils.dart';
 import 'package:anime_shelf/core/window/fused_app_bar.dart';
+import 'package:anime_shelf/features/settings/providers/settings_provider.dart';
 import 'package:anime_shelf/features/shelf/providers/shelf_provider.dart';
 import 'package:anime_shelf/features/shelf/ui/tier_section.dart';
 import 'package:flutter/material.dart';
@@ -22,6 +25,7 @@ class ShelfPage extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tiersAsync = ref.watch(shelfTierListProvider);
+    final importTaskState = ref.watch(plainTextImportTaskProvider);
 
     return Scaffold(
       appBar: FusedAppBar(
@@ -39,6 +43,25 @@ class ShelfPage extends HookConsumerWidget {
           ),
         ],
       ),
+      bottomSheet: importTaskState.showPanel
+          ? _ShelfImportProgressPanel(
+              state: importTaskState,
+              onCancel: () {
+                ref.read(plainTextImportTaskProvider.notifier).cancelImport();
+              },
+              onClose: () {
+                ref.read(plainTextImportTaskProvider.notifier).closePanel();
+              },
+              onViewReport: importTaskState.report == null
+                  ? null
+                  : () {
+                      _showPlainTextImportReport(
+                        context,
+                        importTaskState.report!,
+                      );
+                    },
+            )
+          : null,
       body: tiersAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(
@@ -56,9 +79,40 @@ class ShelfPage extends HookConsumerWidget {
             ],
           ),
         ),
-        data: (tiers) => _ShelfContent(tiers: tiers),
+        data: (tiers) => _ShelfContent(
+          tiers: tiers,
+          bottomPadding: importTaskState.showPanel ? 180 : 16,
+        ),
       ),
     );
+  }
+
+  Future<void> _showPlainTextImportReport(
+    BuildContext context,
+    PlainTextImportReport report,
+  ) async {
+    final message = _buildPlainTextImportReportText(report);
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('纯文本导入报告'),
+        content: SizedBox(
+          width: 560,
+          child: SingleChildScrollView(child: SelectableText(message)),
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _buildPlainTextImportReportText(PlainTextImportReport report) {
+    return buildPlainTextImportReportText(report);
   }
 
   void _showAddTierDialog(BuildContext context, WidgetRef ref) {
@@ -150,8 +204,9 @@ class ShelfPage extends HookConsumerWidget {
 /// Inner scrollable content showing all tier sections.
 class _ShelfContent extends HookConsumerWidget {
   final List<Tier> tiers;
+  final double bottomPadding;
 
-  const _ShelfContent({required this.tiers});
+  const _ShelfContent({required this.tiers, required this.bottomPadding});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -163,7 +218,7 @@ class _ShelfContent extends HookConsumerWidget {
     final sectionRadius = metrics?.sectionRadius ?? 16;
 
     return ReorderableListView.builder(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: EdgeInsets.only(bottom: bottomPadding),
       buildDefaultDragHandles: false,
       cacheExtent: 600,
       itemCount: tiers.length,
@@ -221,6 +276,142 @@ class _ShelfContent extends HookConsumerWidget {
         actualNext != null &&
         RankUtils.needsRecompression(actualPrev, actualNext)) {
       repo.recompressTierSorts();
+    }
+  }
+}
+
+class _ShelfImportProgressPanel extends StatelessWidget {
+  final PlainTextImportTaskState state;
+  final VoidCallback onCancel;
+  final VoidCallback onClose;
+  final VoidCallback? onViewReport;
+
+  const _ShelfImportProgressPanel({
+    required this.state,
+    required this.onCancel,
+    required this.onClose,
+    required this.onViewReport,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final report = state.report;
+    final progress = state.progress;
+
+    final totalEntries = progress?.totalEntries ?? report?.totalEntries ?? 0;
+    final processedEntries =
+        progress?.processedEntries ?? report?.processedEntries ?? 0;
+    final importedCount = progress?.importedCount ?? report?.importedCount ?? 0;
+    final failedCount =
+        progress?.failedCount ??
+        ((report?.duplicateSkipped ?? 0) +
+            (report?.noResultSkipped ?? 0) +
+            (report?.lowConfidenceSkipped ?? 0));
+
+    var progressValue =
+        progress?.progress ??
+        (totalEntries == 0 ? 0.0 : (processedEntries / totalEntries));
+    progressValue = progressValue.clamp(0.0, 1.0).toDouble();
+    if (!state.isRunning && report != null && !report.cancelled) {
+      progressValue = 1.0;
+    }
+
+    final title = _statusText(state);
+
+    return Material(
+      elevation: 8,
+      child: SafeArea(
+        top: false,
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            border: Border(
+              top: BorderSide(color: Theme.of(context).dividerColor),
+            ),
+          ),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              LinearProgressIndicator(value: progressValue),
+              const SizedBox(height: 8),
+              Text(
+                'Processed: $processedEntries/$totalEntries  '
+                'Imported: $importedCount  '
+                'Skipped: $failedCount',
+              ),
+              if (progress != null && progress.currentItem.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'Current: ${progress.currentItem}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+              if (state.errorMessage != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  state.errorMessage!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ],
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  if (state.canCancel)
+                    TextButton.icon(
+                      onPressed: onCancel,
+                      icon: const Icon(Icons.close),
+                      label: const Text('Cancel Import'),
+                    ),
+                  if (onViewReport != null)
+                    OutlinedButton.icon(
+                      onPressed: onViewReport,
+                      icon: const Icon(Icons.receipt_long_outlined),
+                      label: const Text('View Report'),
+                    ),
+                  if (!state.isRunning)
+                    FilledButton.icon(
+                      onPressed: onClose,
+                      icon: const Icon(Icons.done),
+                      label: const Text('Close'),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _statusText(PlainTextImportTaskState taskState) {
+    switch (taskState.status) {
+      case PlainTextImportTaskStatus.idle:
+        return 'Import idle';
+      case PlainTextImportTaskStatus.running:
+        final stage = taskState.progress?.stage;
+        if (stage == PlainTextImportStage.searching) {
+          return 'Searching Bangumi...';
+        }
+        if (stage == PlainTextImportStage.importing) {
+          return 'Importing entries...';
+        }
+        return 'Preparing import...';
+      case PlainTextImportTaskStatus.cancelling:
+        return 'Cancelling import...';
+      case PlainTextImportTaskStatus.completed:
+        return taskState.report?.cancelled == true
+            ? 'Import cancelled'
+            : 'Import completed';
+      case PlainTextImportTaskStatus.failed:
+        return 'Import failed';
     }
   }
 }
