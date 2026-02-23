@@ -228,9 +228,9 @@ void main() {
       await tester.pumpWidget(_testApp(child: const ShelfPage(), db: db));
       await tester.pumpAndSettle();
 
-      // Inbox shows special message, other tiers show "Drag entries here"
+      // Inbox shows special message, other tiers show empty text
       expect(find.text('Search and add anime to get started'), findsOneWidget);
-      expect(find.text('Drag entries here'), findsNWidgets(3));
+      expect(find.text(''), findsNWidgets(3));
 
       await db.close();
     });

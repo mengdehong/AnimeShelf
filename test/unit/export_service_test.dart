@@ -1,21 +1,57 @@
 import 'dart:convert';
 
 import 'package:anime_shelf/core/database/app_database.dart';
+import 'package:anime_shelf/core/network/bangumi_client.dart';
 import 'package:anime_shelf/core/utils/export_service.dart';
+import 'package:anime_shelf/features/search/data/search_repository.dart';
 import 'package:anime_shelf/features/shelf/data/shelf_repository.dart';
+import 'package:dio/dio.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+
+class MockBangumiClient extends Mock implements BangumiClient {}
+
+class MockDio extends Mock implements Dio {}
 
 void main() {
   late AppDatabase db;
   late ShelfRepository shelfRepo;
+  late SearchRepository searchRepo;
   late ExportService exportService;
+  late MockBangumiClient mockClient;
+  late MockDio mockDio;
+  late Map<String, List<Map<String, dynamic>>> searchFixtures;
 
   setUp(() async {
     db = AppDatabase(NativeDatabase.memory());
     shelfRepo = ShelfRepository(db);
-    exportService = ExportService(db, shelfRepo);
+    mockClient = MockBangumiClient();
+    mockDio = MockDio();
+    searchFixtures = <String, List<Map<String, dynamic>>>{};
+
+    when(() => mockClient.dio).thenReturn(mockDio);
+    when(
+      () => mockDio.post<Map<String, dynamic>>(
+        '/v0/search/subjects',
+        data: any(named: 'data'),
+        queryParameters: any(named: 'queryParameters'),
+      ),
+    ).thenAnswer((invocation) async {
+      final data = invocation.namedArguments[#data] as Map<String, dynamic>;
+      final keyword = data['keyword'] as String;
+      final results = searchFixtures[keyword] ?? <Map<String, dynamic>>[];
+
+      return Response<Map<String, dynamic>>(
+        data: {'total': results.length, 'data': results},
+        requestOptions: RequestOptions(path: '/v0/search/subjects'),
+        statusCode: 200,
+      );
+    });
+
+    searchRepo = SearchRepository(mockClient, db);
+    exportService = ExportService(db, shelfRepo, searchRepo: searchRepo);
     // Trigger migration/seed
     await db.select(db.tiers).get();
   });
@@ -217,6 +253,112 @@ void main() {
 
       final tiers = await db.select(db.tiers).get();
       expect(tiers, isEmpty);
+    });
+  });
+
+  group('importPlainText', () {
+    test('supports tier header line and imports to target tier', () async {
+      searchFixtures['clannad'] = [
+        {
+          'id': 101,
+          'name': 'CLANNAD',
+          'name_cn': 'Clannad',
+          'summary': '',
+          'air_date': '2007-10-04',
+          'eps': 23,
+        },
+      ];
+      searchFixtures['三月的狮子'] = [
+        {
+          'id': 102,
+          'name': '3月のライオン',
+          'name_cn': '三月的狮子',
+          'summary': '',
+          'air_date': '2016-10-08',
+          'eps': 22,
+        },
+      ];
+
+      const text = 'S\nclannad\n\n三月的狮子\n';
+      final report = await exportService.importPlainText(text);
+
+      final tiers = await db.select(db.tiers).get();
+      final tierS = tiers.firstWhere((tier) => tier.name == 'S');
+      final entries = await (db.select(
+        db.entries,
+      )..where((entry) => entry.tierId.equals(tierS.id))).get();
+
+      expect(entries.length, equals(2));
+      expect(report.importedCount, equals(2));
+      expect(report.tierHeadersDetected, equals(1));
+    });
+
+    test('unknown tier header routes subsequent imports to inbox', () async {
+      searchFixtures['clannad'] = [
+        {
+          'id': 201,
+          'name': 'CLANNAD',
+          'name_cn': 'Clannad',
+          'summary': '',
+          'air_date': '2007-10-04',
+          'eps': 23,
+        },
+      ];
+
+      const text = 'SS\nclannad\n';
+      final report = await exportService.importPlainText(text);
+
+      final tiers = await db.select(db.tiers).get();
+      final inbox = tiers.firstWhere((tier) => tier.isInbox);
+      final entries = await (db.select(
+        db.entries,
+      )..where((entry) => entry.tierId.equals(inbox.id))).get();
+
+      expect(entries.length, equals(1));
+      expect(report.unknownTierHeaders, contains('SS'));
+      expect(report.inboxFallbackEntries.length, equals(1));
+    });
+
+    test('skips low-confidence top1 matches', () async {
+      searchFixtures['abc'] = [
+        {
+          'id': 301,
+          'name': '完全不匹配标题',
+          'name_cn': '完全不匹配标题',
+          'summary': '',
+          'air_date': '2010-01-01',
+          'eps': 1,
+        },
+      ];
+
+      const text = 'abc\n';
+      final report = await exportService.importPlainText(text);
+
+      final entries = await db.select(db.entries).get();
+      expect(entries, isEmpty);
+      expect(report.lowConfidenceSkipped, equals(1));
+      expect(report.importedCount, equals(0));
+    });
+
+    test('skips duplicate subjects in the same import batch', () async {
+      searchFixtures['clannad'] = [
+        {
+          'id': 401,
+          'name': 'CLANNAD',
+          'name_cn': 'Clannad',
+          'summary': '',
+          'air_date': '2007-10-04',
+          'eps': 23,
+        },
+      ];
+
+      const text = 'S\nclannad\nclannad\n';
+      final report = await exportService.importPlainText(text);
+
+      final entries = await db.select(db.entries).get();
+      expect(entries.length, equals(1));
+      expect(report.importedCount, equals(1));
+      expect(report.duplicateSkipped, equals(1));
     });
   });
 

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:anime_shelf/core/app_name_notifier.dart';
 import 'package:anime_shelf/core/theme/app_theme.dart';
 import 'package:anime_shelf/core/theme/theme_notifier.dart';
+import 'package:anime_shelf/core/utils/export_service.dart';
 import 'package:anime_shelf/core/window/fused_app_bar.dart';
 import 'package:anime_shelf/core/window/window_settings_notifier.dart';
 import 'package:anime_shelf/features/settings/providers/settings_provider.dart';
@@ -114,6 +115,12 @@ class SettingsPage extends HookConsumerWidget {
             title: const Text('Import JSON Backup'),
             subtitle: const Text('Restore from .json file'),
             onTap: () => _import(context, ref),
+          ),
+          ListTile(
+            leading: const Icon(Icons.playlist_add_check_circle_outlined),
+            title: const Text('Paste Plain Text List'),
+            subtitle: const Text('Paste text; one anime per line'),
+            onTap: () => _importPlainText(context, ref),
           ),
         ],
       ),
@@ -295,5 +302,149 @@ class SettingsPage extends HookConsumerWidget {
         ).showSnackBar(SnackBar(content: Text('Import failed: $e')));
       }
     }
+  }
+
+  Future<void> _importPlainText(BuildContext context, WidgetRef ref) async {
+    try {
+      final content = await _showPlainTextInputDialog(context);
+      if (content == null) {
+        return;
+      }
+
+      if (content.trim().isEmpty) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Input is empty')));
+        }
+        return;
+      }
+
+      final exportService = ref.read(exportServiceProvider);
+      final report = await exportService.importPlainText(content);
+
+      if (context.mounted) {
+        await _showPlainTextImportReport(context, report);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Import failed: $e')));
+      }
+    }
+  }
+
+  Future<String?> _showPlainTextInputDialog(BuildContext context) async {
+    final controller = TextEditingController();
+
+    final text = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Paste Plain Text List'),
+        content: SizedBox(
+          width: 560,
+          child: TextField(
+            controller: controller,
+            autofocus: true,
+            minLines: 12,
+            maxLines: 20,
+            keyboardType: TextInputType.multiline,
+            textInputAction: TextInputAction.newline,
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              alignLabelWithHint: true,
+              hintText: 'S\nClannad\n\nA\n欢迎加入NHK',
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(null),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(controller.text),
+            child: const Text('Import'),
+          ),
+        ],
+      ),
+    );
+
+    controller.dispose();
+    return text;
+  }
+
+  Future<void> _showPlainTextImportReport(
+    BuildContext context,
+    PlainTextImportReport report,
+  ) async {
+    final message = _buildPlainTextImportReportText(report);
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Plain Text Import Report'),
+        content: SizedBox(
+          width: 560,
+          child: SingleChildScrollView(child: SelectableText(message)),
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _buildPlainTextImportReportText(PlainTextImportReport report) {
+    final lines = <String>[
+      'Total lines: ${report.totalLines}',
+      'Imported: ${report.importedCount}',
+      'Tier headers detected: ${report.tierHeadersDetected}',
+      'Skipped empty lines: ${report.emptyLinesSkipped}',
+      'Skipped duplicates: ${report.duplicateSkipped}',
+      'Skipped no-result: ${report.noResultSkipped}',
+      'Skipped low-confidence: ${report.lowConfidenceSkipped}',
+    ];
+
+    if (report.unknownTierHeaders.isNotEmpty) {
+      lines
+        ..add('')
+        ..add('Unknown tier headers (routed to Inbox):')
+        ..addAll(report.unknownTierHeaders.map((name) => '- $name'));
+    }
+
+    if (report.inboxFallbackEntries.isNotEmpty) {
+      lines
+        ..add('')
+        ..add('Imported to Inbox due to unknown tier header:')
+        ..addAll(report.inboxFallbackEntries.map((entry) => '- $entry'));
+    }
+
+    if (report.lowConfidenceEntries.isNotEmpty) {
+      lines
+        ..add('')
+        ..add('Low-confidence matches skipped:')
+        ..addAll(report.lowConfidenceEntries.map((entry) => '- $entry'));
+    }
+
+    if (report.noResultEntries.isNotEmpty) {
+      lines
+        ..add('')
+        ..add('No-result lines skipped:')
+        ..addAll(report.noResultEntries.map((entry) => '- $entry'));
+    }
+
+    if (report.duplicateEntries.isNotEmpty) {
+      lines
+        ..add('')
+        ..add('Duplicate lines skipped:')
+        ..addAll(report.duplicateEntries.map((entry) => '- $entry'));
+    }
+
+    return lines.join('\n');
   }
 }

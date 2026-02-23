@@ -89,37 +89,11 @@ class AppTheme {
   AppTheme._();
 
   static final List<ThemeData> _allThemes = List<ThemeData>.unmodifiable([
-    sakuraPink(),
     bilibiliRed(),
     dark(),
+    pixivBlue(),
+    mikuTeal(),
   ]);
-
-  static ThemeData sakuraPink() {
-    const primary = Color(0xFFF09199);
-    const surface = Color(0xFFF5F5F7);
-    const card = Color(0xFFFFFFFF);
-    const text = Color(0xFF222222);
-
-    return _buildTheme(
-      brightness: Brightness.light,
-      primary: primary,
-      surface: surface,
-      card: card,
-      text: text,
-      metrics: const AppThemeMetrics(
-        cardRadius: 20,
-        controlRadius: 16,
-        sectionRadius: 16,
-        posterRadius: 12,
-        tileRadius: 8,
-        cardElevation: 1,
-        cardShadowOpacity: 0.04,
-        fabCircular: false,
-        appBarBackground: surface,
-        inputFillColor: card,
-      ),
-    );
-  }
 
   static ThemeData bilibiliRed() {
     const primary = Color(0xFFFB7299);
@@ -146,6 +120,60 @@ class AppTheme {
         fabCircular: true,
         appBarBackground: card,
         inputFillColor: Color(0xFFF1F2F3),
+      ),
+    );
+  }
+
+  static ThemeData pixivBlue() {
+    const primary = Color(0xFF0096FA);
+    const surface = Color(0xFFF5F6F8);
+    const card = Color(0xFFFFFFFF);
+    const text = Color(0xFF1F1F1F);
+
+    return _buildTheme(
+      brightness: Brightness.light,
+      primary: primary,
+      surface: surface,
+      card: card,
+      text: text,
+      metrics: const AppThemeMetrics(
+        cardRadius: 12,
+        controlRadius: 12,
+        sectionRadius: 12,
+        posterRadius: 8,
+        tileRadius: 8,
+        cardElevation: 1,
+        cardShadowOpacity: 0.05,
+        fabCircular: true,
+        appBarBackground: card,
+        inputFillColor: Color(0xFFF0F2F5),
+      ),
+    );
+  }
+
+  static ThemeData mikuTeal() {
+    const primary = Color(0xFF39C5BB);
+    const surface = Color(0xFFF0F5F5);
+    const card = Color(0xFFFFFFFF);
+    const text = Color(0xFF222222);
+
+    return _buildTheme(
+      brightness: Brightness.light,
+      primary: primary,
+      surface: surface,
+      card: card,
+      text: text,
+      metrics: const AppThemeMetrics(
+        cardRadius: 24,
+        controlRadius: 20,
+        sectionRadius: 20,
+        posterRadius: 16,
+        tileRadius: 14,
+        cardElevation: 1.5,
+        cardShadowOpacity: 0.06,
+        fabCircular: false,
+        appBarBackground: Color(0xFFEAF4F3),
+        inputFillColor: Color(0xFFE8F2F1),
       ),
     );
   }
@@ -293,8 +321,9 @@ class AppTheme {
   }
 
   static const List<String> themeNames = [
-    'Sakura Pink',
     'Bilibili Red',
     'Dark',
+    'Pixiv Blue',
+    'Miku Teal',
   ];
 }

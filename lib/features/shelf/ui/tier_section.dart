@@ -151,9 +151,7 @@ class TierSection extends HookConsumerWidget {
                   ),
                   child: Center(
                     child: Text(
-                      tier.isInbox
-                          ? 'Search and add anime to get started'
-                          : 'Drag entries here',
+                      tier.isInbox ? 'Search and add anime to get started' : '',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ),
