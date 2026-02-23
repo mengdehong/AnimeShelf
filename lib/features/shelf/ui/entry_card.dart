@@ -100,7 +100,7 @@ class EntryCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: Colors.white, // 纯白字体在深色渐变上最清晰
-                      fontSize: 12, // 稍微调大一点点字体
+                      fontSize: 11, // 稍微调小字体适应长标题
                       fontWeight: FontWeight.w800, // 更粗的字体，增强辨识度
                       height: 1.1,
                       letterSpacing: 0.3,
