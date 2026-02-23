@@ -6,10 +6,10 @@
 
 ### 平台范围 (Platforms)
 
-* **首发目标**：Android + 桌面端。
-* **桌面端优先级**：Linux（Wayland）优先；Windows 可后置。
-* **分发策略（桌面端）**：先支持开发态运行/压缩包分发；暂不考虑商店/沙盒打包（Flatpak/Snap 等）与平板适配。
-* **桌面端产物结构**：`flutter build linux --release` 输出 `bundle/` 目录（含可执行文件、`lib/` 动态库、`data/` 资产），整体压缩分发。依赖：GTK 3.x（主流发行版已内置）；SQLite 通过 `sqlite3_flutter_libs` 随 app 捆绑，无需用户单独安装。
+* **首发目标**：Android + Linux + Windows。
+* **桌面端策略**：Linux（Wayland）与 Windows 同步支持，Linux 优先源码编译、AUR 与通用安装包分发。
+* **分发策略（桌面端）**：Linux 提供源码编译、AUR 包（`animeshelf`）与通用压缩包；Windows 提供 NSIS `exe` 安装包；暂不考虑商店/沙盒打包（Flatpak/Snap/MSIX 等）与平板适配。
+* **桌面端产物结构**：`flutter build linux --release` 输出 `bundle/` 目录（含可执行文件、`lib/` 动态库、`data/` 资产）并整体压缩分发；`flutter build windows --release` 生成 Release 目录，由 NSIS 打包为安装器。Linux 依赖 GTK 3.x（主流发行版已内置）；SQLite 通过 `sqlite3_flutter_libs` 随 app 捆绑，无需用户单独安装。
 
 ## 二、 核心功能清单 (Feature List)
 
@@ -19,7 +19,7 @@
 * **优雅降级**：网络延迟时展示“骨架屏”或“ACG趣味占位图”。
 * **便捷收录**：一键收录，并弹出精美的 BottomSheet 选择归属等级。
 * **接口策略**：先使用 Bangumi **公开接口**；如后续出现频率/权限需求再考虑切换到鉴权方案。
-* **User-Agent**：所有请求携带固定头 `User-Agent: AnimeShelf/1.0 (https://github.com/your-repo/animeshelf)`，遵循 Bangumi API 使用规范。批量刷新并发上限 ≤ 3，失败后指数退避重试（1s → 2s → 4s，最多 3 次）。
+* **User-Agent**：所有请求携带固定头 `User-Agent: AnimeShelf/1.0 (https://github.com/mengdehong/AnimeShelf)`，遵循 Bangumi API 使用规范。批量刷新并发上限 ≤ 3，失败后指数退避重试（1s → 2s → 4s，最多 3 次）。
 
 ### 1.1 数据边界与刷新 (Data Boundary & Refresh)
 
