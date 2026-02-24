@@ -29,10 +29,10 @@
 
 ### 2. 主看板：私人书架 (The Shelf)
 
-* **布局与排版**：纵向分层 + 自动换行排版。按等级区块从上到下排列，区域内海报网格化铺开。
+* **布局与排版**：纵向分层 + 自动换行排版。按等级区块从上到下排列，区域内海报响应式网格化铺开，适配多端不同屏幕尺寸。
 * **丝滑交互**：长按海报触发悬浮动效，支持同级内排序、跨级拖拽，以及**边缘自动滚动**。
 * **收件箱 (Inbox)**：设立“未分类区”，专门存放刚收录还未评级的番剧。
-* **等级管理**：完全自定义等级，用户可自由新增等级（如 SS, 弃坑），自定义名称、Emoji 及专属颜色。
+* **等级管理**：统一的管理面板，不仅可以自由新增等级（自定义名称、Emoji 及专属颜色），还可以直接在同个面板中拖拽对现存分组进行排序。
 
 ### 2.1 排序语义 (Sorting Semantics)
 
@@ -68,13 +68,14 @@
 
 ### 4. 数据备份与导出 (Backup & Export)
 
-* **原生备份**：导出/导入`.json`（或专属后缀`.animeshelf`）全量数据。
+* **原生备份**：导出/导入`.animeshelf`（或 `.json`）全量数据，导入时包含健壮的去重逻辑与关系映射恢复机制。
 * **表格导出**：导出 CSV 格式（含评级、番名、评分、本地长评论），方便 Excel 处理。
-* **文档导出**：纯文本（`.txt`）导出，格式贴近纯文本导入（分组标题 + 每行一条目），便于直接复制回导入。
-* **导出范围**：默认全量导出（后续如体验更好可增加筛选导出）。
+* **文档导出**：纯文本（`.txt`）导出，格式贴近纯文本导入（分组标题 + 每行一条目），便于直接复制回导入；同时也具备防重复导入的识别能力。
+* **导出范围**：默认全量导出。
 
-### 5. 视觉与主题引擎 (Design & Theming)
+### 5. 视觉、主题与本地化 (Design & Theming)
 
+* **本地化 (Localization)**：全应用范围支持中文本地化，包含所有文案、校验信息与导入报告。
 * **设计语言**：Soft UI（大圆角、微阴影、低饱和度色彩）。
 * **多主题切换**：内置“樱花粉/奶油白”、“B站经典红”等多套主题。
 * **夜间模式**：护眼暗色模式，摒弃纯黑，采用深灰/深紫等有质感的暗黑配色。
@@ -92,7 +93,7 @@
 
 ### 1. 核心技术选型
 
-* **开发框架**：Flutter 3.x (主打移动端，潜力支持跨平台)
+* **开发框架**：Flutter 3.x 
 * **状态管理**：**Riverpod** (`riverpod_generator`,`hooks_riverpod`) - 负责全应用的状态同步与异步请求状态处理。
 * **本地数据库**：**Drift (SQLite)** - 基于 SQLite 的关系型持久化库（Flutter Favorite），跨平台支持完善（含 Linux 桌面）。关系型模型对 Entry-Subject 多对多关联更自然，SQLite 在所有目标平台均可通过 `sqlite3_flutter_libs` 捆绑分发。
 * **网络通信**：`dio` (请求 Bangumi API)。
@@ -109,7 +110,9 @@
 ├── analysis_options.yaml                              # Lint rules configured
 ├── lib/
 │   ├── main.dart                                      # App entry point (ProviderScope + MaterialApp.router)
+│   ├── l10n/                                          # App localization resources (.arb) and generated classes
 │   ├── core/
+│   │   ├── app_name_notifier.dart                     # App window name notifier for desktop 
 │   │   ├── database/app_database.dart                 # Drift @DriftDatabase + seed tiers
 │   │   ├── database/app_database.g.dart               # Generated Drift code
 │   │   ├── exceptions/api_exception.dart              # ApiException, NetworkTimeoutException, NoConnectionException
@@ -121,9 +124,12 @@
 │   │   ├── router.dart                                # GoRouter: /shelf, /search, /details/:entryId, /settings
 │   │   ├── providers.dart                             # databaseProvider, bangumiClientProvider
 │   │   ├── providers.g.dart                           # Generated
+│   │   ├── window/                                    # Desktop window controls and layout logic
 │   │   └── utils/
 │   │       ├── rank_utils.dart                        # insertRank, needsRecompression, recompressRanks
-│   │       └── export_service.dart                    # JSON/CSV/TXT export + JSON import
+│   │       ├── export_service.dart                    # JSON/CSV/TXT export + JSON import
+│   │       ├── local_image_service.dart               # Service for resolving offline posters
+│   │       └── plain_text_import_report_formatter.dart# Text format utilities for importing
 │   ├── models/
 │   │   ├── tier.dart                                  # Drift Tiers table
 │   │   ├── subject.dart                               # Drift Subjects table (custom PK: subjectId)
