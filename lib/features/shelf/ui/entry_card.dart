@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:anime_shelf/core/theme/app_theme.dart';
 import 'package:anime_shelf/features/shelf/data/shelf_repository.dart';
+import 'package:anime_shelf/l10n/app_localizations.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
@@ -21,11 +22,12 @@ class EntryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final subject = entryData.subject;
     final metrics = theme.extension<AppThemeMetrics>();
     final title = subject?.nameCn.isNotEmpty == true
         ? subject!.nameCn
-        : (subject?.nameJp ?? 'Unknown');
+        : (subject?.nameJp ?? l10n.unknown);
     final localThumbPath = subject?.localThumbnailPath ?? '';
     final posterUrl = subject?.posterUrl ?? '';
     final posterRadius = metrics?.posterRadius ?? 12;

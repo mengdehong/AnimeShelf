@@ -7,6 +7,7 @@ import 'package:anime_shelf/features/settings/providers/settings_provider.dart';
 import 'package:anime_shelf/features/shelf/data/shelf_repository.dart';
 import 'package:anime_shelf/features/shelf/providers/shelf_provider.dart';
 import 'package:anime_shelf/features/shelf/ui/tier_section.dart';
+import 'package:anime_shelf/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -26,6 +27,7 @@ class ShelfPage extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tiersAsync = ref.watch(shelfTiersProvider);
     final importTaskState = ref.watch(plainTextImportTaskProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: FusedAppBar(
@@ -71,7 +73,7 @@ class ShelfPage extends HookConsumerWidget {
               const Icon(Icons.error_outline, size: 48),
               const SizedBox(height: 16),
               Text(
-                'Failed to load shelf',
+                l10n.failedToLoadShelf,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
@@ -91,12 +93,13 @@ class ShelfPage extends HookConsumerWidget {
     BuildContext context,
     PlainTextImportReport report,
   ) async {
+    final l10n = AppLocalizations.of(context)!;
     final message = _buildPlainTextImportReportText(report);
 
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('纯文本导入报告'),
+        title: Text(l10n.plainTextImportReportTitle),
         content: SizedBox(
           width: 560,
           child: SingleChildScrollView(child: SelectableText(message)),
@@ -104,7 +107,7 @@ class ShelfPage extends HookConsumerWidget {
         actions: [
           FilledButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
+            child: Text(l10n.ok),
           ),
         ],
       ),
@@ -116,6 +119,7 @@ class ShelfPage extends HookConsumerWidget {
   }
 
   Future<void> _showAddTierDialog(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context)!;
     final nameController = TextEditingController();
     final emojiController = TextEditingController();
     var selectedColor = 0xFF2196F3;
@@ -137,24 +141,24 @@ class ShelfPage extends HookConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'New Tier',
+                l10n.newTier,
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Name',
-                  hintText: 'e.g. SSS, SS, S, A...',
+                decoration: InputDecoration(
+                  labelText: l10n.name,
+                  hintText: l10n.tierNameHint,
                 ),
                 autofocus: true,
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: emojiController,
-                decoration: const InputDecoration(
-                  labelText: 'Emoji (optional)',
-                  hintText: 'e.g. \u{1F451}',
+                decoration: InputDecoration(
+                  labelText: l10n.emojiOptional,
+                  hintText: l10n.emojiHint,
                 ),
               ),
               const SizedBox(height: 12),
@@ -196,7 +200,7 @@ class ShelfPage extends HookConsumerWidget {
                       );
                   Navigator.of(context).pop();
                 },
-                child: const Text('Add Tier'),
+                child: Text(l10n.addTier),
               ),
             ],
           ),
@@ -218,8 +222,10 @@ class _ShelfContent extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+
     if (tiers.isEmpty) {
-      return const Center(child: Text('No tiers yet. Tap + to add one.'));
+      return Center(child: Text(l10n.noTiersYet));
     }
 
     final metrics = Theme.of(context).extension<AppThemeMetrics>();
@@ -307,6 +313,7 @@ class _ShelfImportProgressPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final report = state.report;
     final progress = state.progress;
 
@@ -328,7 +335,7 @@ class _ShelfImportProgressPanel extends StatelessWidget {
       progressValue = 1.0;
     }
 
-    final title = _statusText(state);
+    final title = _statusText(l10n, state);
 
     return Material(
       elevation: 8,
@@ -352,14 +359,17 @@ class _ShelfImportProgressPanel extends StatelessWidget {
               LinearProgressIndicator(value: progressValue),
               const SizedBox(height: 8),
               Text(
-                'Processed: $processedEntries/$totalEntries  '
-                'Imported: $importedCount  '
-                'Skipped: $failedCount',
+                l10n.processedImportedSkipped(
+                  processedEntries,
+                  totalEntries,
+                  importedCount,
+                  failedCount,
+                ),
               ),
               if (progress != null && progress.currentItem.isNotEmpty) ...[
                 const SizedBox(height: 4),
                 Text(
-                  'Current: ${progress.currentItem}',
+                  l10n.currentItem(progress.currentItem),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -380,19 +390,19 @@ class _ShelfImportProgressPanel extends StatelessWidget {
                     TextButton.icon(
                       onPressed: onCancel,
                       icon: const Icon(Icons.close),
-                      label: const Text('Cancel Import'),
+                      label: Text(l10n.cancelImport),
                     ),
                   if (onViewReport != null)
                     OutlinedButton.icon(
                       onPressed: onViewReport,
                       icon: const Icon(Icons.receipt_long_outlined),
-                      label: const Text('View Report'),
+                      label: Text(l10n.viewReport),
                     ),
                   if (!state.isRunning)
                     FilledButton.icon(
                       onPressed: onClose,
                       icon: const Icon(Icons.done),
-                      label: const Text('Close'),
+                      label: Text(l10n.close),
                     ),
                 ],
               ),
@@ -403,27 +413,30 @@ class _ShelfImportProgressPanel extends StatelessWidget {
     );
   }
 
-  String _statusText(PlainTextImportTaskState taskState) {
+  String _statusText(
+    AppLocalizations l10n,
+    PlainTextImportTaskState taskState,
+  ) {
     switch (taskState.status) {
       case PlainTextImportTaskStatus.idle:
-        return 'Import idle';
+        return l10n.importIdle;
       case PlainTextImportTaskStatus.running:
         final stage = taskState.progress?.stage;
         if (stage == PlainTextImportStage.searching) {
-          return 'Searching Bangumi...';
+          return l10n.searchingBangumi;
         }
         if (stage == PlainTextImportStage.importing) {
-          return 'Importing entries...';
+          return l10n.importingEntries;
         }
-        return 'Preparing import...';
+        return l10n.preparingImport;
       case PlainTextImportTaskStatus.cancelling:
-        return 'Cancelling import...';
+        return l10n.cancellingImport;
       case PlainTextImportTaskStatus.completed:
         return taskState.report?.cancelled == true
-            ? 'Import cancelled'
-            : 'Import completed';
+            ? l10n.importCancelled
+            : l10n.importCompleted;
       case PlainTextImportTaskStatus.failed:
-        return 'Import failed';
+        return l10n.importFailedStatus;
     }
   }
 }
@@ -439,6 +452,7 @@ class _SearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
 
     return InkWell(
       onTap: onTap,
@@ -459,7 +473,7 @@ class _SearchBar extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Text(
-              'Search Bangumi...',
+              l10n.searchBangumiHint,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onSurface.withValues(alpha: 0.45),
               ),

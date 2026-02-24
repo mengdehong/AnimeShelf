@@ -11,6 +11,7 @@ import 'package:anime_shelf/core/window/fused_app_bar.dart';
 import 'package:anime_shelf/core/window/window_settings_notifier.dart';
 import 'package:anime_shelf/features/settings/providers/settings_provider.dart';
 import 'package:anime_shelf/features/shelf/providers/shelf_provider.dart';
+import 'package:anime_shelf/l10n/app_localizations.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -22,6 +23,7 @@ class SettingsPage extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final themeIndex = ref.watch(themeNotifierProvider);
     final hideTitleBar = ref.watch(windowSettingsNotifierProvider);
     final appName = ref.watch(appNameNotifierProvider);
@@ -35,7 +37,7 @@ class SettingsPage extends HookConsumerWidget {
     final hasBottomPanel = showImportPanel || showImagePanel;
 
     return Scaffold(
-      appBar: const FusedAppBar(title: Text('Settings')),
+      appBar: FusedAppBar(title: Text(l10n.settings)),
       bottomSheet: showImportPanel
           ? _PlainTextImportBottomSheet(
               state: importTaskState,
@@ -66,7 +68,7 @@ class SettingsPage extends HookConsumerWidget {
         padding: EdgeInsets.fromLTRB(16, 16, 16, hasBottomPanel ? 180 : 16),
         children: [
           // ── Theme Section ──
-          Text('Theme', style: Theme.of(context).textTheme.titleMedium),
+          Text(l10n.theme, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           RadioGroup<int>(
             groupValue: themeIndex,
@@ -76,9 +78,9 @@ class SettingsPage extends HookConsumerWidget {
               }
             },
             child: Column(
-              children: List.generate(AppTheme.themeNames.length, (index) {
+              children: List.generate(AppTheme.allThemes.length, (index) {
                 return RadioListTile<int>(
-                  title: Text(AppTheme.themeNames[index]),
+                  title: Text(_themeName(l10n, index)),
                   value: index,
                 );
               }),
@@ -89,12 +91,12 @@ class SettingsPage extends HookConsumerWidget {
 
           // ── Window Section (Linux desktop only) ──
           if (Platform.isLinux) ...[
-            Text('Window', style: Theme.of(context).textTheme.titleMedium),
+            Text(l10n.window, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             SwitchListTile(
               secondary: const Icon(Icons.window),
-              title: const Text('Hide system title bar'),
-              subtitle: const Text('Use a custom in-app title bar instead'),
+              title: Text(l10n.hideSystemTitleBar),
+              subtitle: Text(l10n.useCustomInAppTitleBarInstead),
               value: hideTitleBar,
               onChanged: (value) async {
                 await ref
@@ -102,18 +104,14 @@ class SettingsPage extends HookConsumerWidget {
                     .setHideTitleBar(value);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Restart the app for this change to fully take effect.',
-                      ),
-                    ),
+                    SnackBar(content: Text(l10n.restartAppForTitleBarChange)),
                   );
                 }
               },
             ),
             ListTile(
               leading: const Icon(Icons.label_outline),
-              title: const Text('App display name'),
+              title: Text(l10n.appDisplayName),
               subtitle: Text(appName),
               trailing: const Icon(Icons.edit_outlined),
               onTap: () => _showRenameDialog(context, ref, appName),
@@ -122,51 +120,53 @@ class SettingsPage extends HookConsumerWidget {
           ],
 
           // ── Export Section ──
-          Text('Export', style: Theme.of(context).textTheme.titleMedium),
+          Text(l10n.export, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           ListTile(
             leading: const Icon(Icons.save_alt),
-            title: const Text('Export JSON Backup'),
-            subtitle: const Text('Full backup (.json)'),
+            title: Text(l10n.exportJsonBackup),
+            subtitle: Text(l10n.fullBackupJson),
             onTap: () => _export(context, ref, 'json'),
           ),
           ListTile(
             leading: const Icon(Icons.table_chart),
-            title: const Text('Export CSV'),
-            subtitle: const Text('Spreadsheet format'),
+            title: Text(l10n.exportCsv),
+            subtitle: Text(l10n.spreadsheetFormat),
             onTap: () => _export(context, ref, 'csv'),
           ),
           ListTile(
             leading: const Icon(Icons.article),
-            title: const Text('Export Plain Text'),
-            subtitle: const Text('Copies to clipboard and exports .txt'),
+            title: Text(l10n.exportPlainText),
+            subtitle: Text(l10n.copiesToClipboardAndExportsTxt),
             onTap: () => _export(context, ref, 'txt'),
           ),
 
           const Divider(height: 32),
 
           // ── Import Section ──
-          Text('Import', style: Theme.of(context).textTheme.titleMedium),
+          Text(l10n.import, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           ListTile(
             leading: const Icon(Icons.upload_file),
-            title: const Text('Import JSON Backup'),
-            subtitle: const Text('Restore from .json file'),
+            title: Text(l10n.importJsonBackup),
+            subtitle: Text(l10n.restoreFromJsonFile),
             onTap: () => _import(context, ref),
           ),
           ListTile(
             leading: const Icon(Icons.playlist_add_check_circle_outlined),
-            title: const Text('Paste Plain Text List'),
-            subtitle: const Text('Paste text; one anime per line'),
+            title: Text(l10n.pastePlainTextList),
+            subtitle: Text(l10n.pasteTextOneAnimePerLine),
             onTap: () => _importPlainText(context, ref),
           ),
           ListTile(
             leading: const Icon(Icons.speed_outlined),
-            title: const Text('Plain Text Import Concurrency'),
+            title: Text(l10n.plainTextImportConcurrency),
             subtitle: Text(
-              'Current: $importConcurrency '
-              '(range $plainTextImportMinConcurrency-'
-              '$plainTextImportMaxConcurrency)',
+              l10n.currentRange(
+                importConcurrency,
+                plainTextImportMinConcurrency,
+                plainTextImportMaxConcurrency,
+              ),
             ),
           ),
           Padding(
@@ -199,24 +199,22 @@ class SettingsPage extends HookConsumerWidget {
 
           // ── Data Management Section ──
           Text(
-            'Data Management',
+            l10n.dataManagement,
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 8),
           ListTile(
             leading: const Icon(Icons.download_outlined),
-            title: const Text('Re-download Images'),
-            subtitle: const Text(
-              'Download posters for entries missing local files',
-            ),
+            title: Text(l10n.redownloadImages),
+            subtitle: Text(l10n.downloadPostersMissingLocalFiles),
             onTap: imageTaskState.isRunning
                 ? null
                 : () => _redownloadImages(context, ref),
           ),
           ListTile(
             leading: const Icon(Icons.cleaning_services_outlined),
-            title: const Text('Clear Local Images'),
-            subtitle: const Text('Remove all cached poster files from device'),
+            title: Text(l10n.clearLocalImages),
+            subtitle: Text(l10n.removeCachedPosterFilesFromDevice),
             onTap: imageTaskState.isRunning
                 ? null
                 : () => _confirmClearLocalImages(context, ref),
@@ -227,15 +225,30 @@ class SettingsPage extends HookConsumerWidget {
               color: Theme.of(context).colorScheme.error,
             ),
             title: Text(
-              'Clear All Entries',
+              l10n.clearAllEntries,
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
-            subtitle: const Text('Deletes all entries; keeps tiers intact'),
+            subtitle: Text(l10n.deletesAllEntriesKeepsTiers),
             onTap: () => _confirmClearAllEntries(context, ref),
           ),
         ],
       ),
     );
+  }
+
+  String _themeName(AppLocalizations l10n, int index) {
+    switch (index) {
+      case 0:
+        return l10n.themeBilibiliRed;
+      case 1:
+        return l10n.themeDark;
+      case 2:
+        return l10n.themePixivBlue;
+      case 3:
+        return l10n.themeMikuTeal;
+      default:
+        return l10n.themeBilibiliRed;
+    }
   }
 
   Future<void> _showRenameDialog(
@@ -258,6 +271,8 @@ class SettingsPage extends HookConsumerWidget {
     WidgetRef ref,
     String format,
   ) async {
+    final l10n = AppLocalizations.of(context)!;
+
     try {
       final exportService = ref.read(exportServiceProvider);
 
@@ -269,14 +284,15 @@ class SettingsPage extends HookConsumerWidget {
           final savePath = await _exportToLinuxFile(
             ref,
             format,
+            l10n: l10n,
             overrideContent: text,
           );
           if (context.mounted) {
             final message = switch ((savePath, copied)) {
-              (null, true) => 'Copied to clipboard (file export cancelled)',
-              (null, false) => 'Export cancelled',
-              (_, true) => 'Copied to clipboard and exported to $savePath',
-              (_, false) => 'Exported to $savePath (clipboard copy failed)',
+              (null, true) => l10n.copiedToClipboardFileExportCancelled,
+              (null, false) => l10n.exportCancelled,
+              (_, true) => l10n.copiedToClipboardAndExportedToPath(savePath!),
+              (_, false) => l10n.exportedToPathClipboardFailed(savePath!),
             };
             ScaffoldMessenger.of(
               context,
@@ -288,8 +304,8 @@ class SettingsPage extends HookConsumerWidget {
         await exportService.exportPlainTextFile(content: text);
         if (context.mounted) {
           final message = copied
-              ? 'Copied to clipboard and exported'
-              : 'Export complete (clipboard copy failed)';
+              ? l10n.copiedToClipboardAndExported
+              : l10n.exportCompleteClipboardFailed;
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(SnackBar(content: Text(message)));
@@ -298,16 +314,16 @@ class SettingsPage extends HookConsumerWidget {
       }
 
       if (Platform.isLinux) {
-        final savePath = await _exportToLinuxFile(ref, format);
+        final savePath = await _exportToLinuxFile(ref, format, l10n: l10n);
         if (context.mounted) {
           if (savePath == null) {
             ScaffoldMessenger.of(
               context,
-            ).showSnackBar(const SnackBar(content: Text('Export cancelled')));
+            ).showSnackBar(SnackBar(content: Text(l10n.exportCancelled)));
           } else {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text('Exported to $savePath')));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(l10n.exportedToPath(savePath))),
+            );
           }
         }
         return;
@@ -324,13 +340,13 @@ class SettingsPage extends HookConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Export complete')));
+        ).showSnackBar(SnackBar(content: Text(l10n.exportComplete)));
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Export failed: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.exportFailed(e.toString()))),
+        );
       }
     }
   }
@@ -338,6 +354,7 @@ class SettingsPage extends HookConsumerWidget {
   Future<String?> _exportToLinuxFile(
     WidgetRef ref,
     String format, {
+    required AppLocalizations l10n,
     String? overrideContent,
   }) async {
     final exportService = ref.read(exportServiceProvider);
@@ -360,11 +377,11 @@ class SettingsPage extends HookConsumerWidget {
         fileName = 'animeshelf_export.txt';
         extension = 'txt';
       default:
-        throw ArgumentError('Unsupported export format: $format');
+        throw ArgumentError(l10n.unsupportedExportFormat(format));
     }
 
     final savePath = await FilePicker.platform.saveFile(
-      dialogTitle: 'Save export file',
+      dialogTitle: l10n.saveExportFile,
       fileName: fileName,
       type: FileType.custom,
       allowedExtensions: [extension],
@@ -389,6 +406,8 @@ class SettingsPage extends HookConsumerWidget {
   }
 
   Future<void> _import(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context)!;
+
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
@@ -408,18 +427,16 @@ class SettingsPage extends HookConsumerWidget {
         final confirmed = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Import Backup?'),
-            content: const Text(
-              'This will replace all current data. Are you sure?',
-            ),
+            title: Text(l10n.importBackupQuestion),
+            content: Text(l10n.importBackupWarning),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
+                child: Text(l10n.cancel),
               ),
               FilledButton(
                 onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Import'),
+                child: Text(l10n.import),
               ),
             ],
           ),
@@ -430,20 +447,22 @@ class SettingsPage extends HookConsumerWidget {
           if (context.mounted) {
             ScaffoldMessenger.of(
               context,
-            ).showSnackBar(const SnackBar(content: Text('Import complete')));
+            ).showSnackBar(SnackBar(content: Text(l10n.importComplete)));
           }
         }
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Import failed: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.importFailed(e.toString()))),
+        );
       }
     }
   }
 
   Future<void> _importPlainText(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context)!;
+
     try {
       final content = await _showPlainTextInputDialog(context);
       if (content == null) {
@@ -454,7 +473,7 @@ class SettingsPage extends HookConsumerWidget {
         if (context.mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text('Input is empty')));
+          ).showSnackBar(SnackBar(content: Text(l10n.inputIsEmpty)));
         }
         return;
       }
@@ -466,22 +485,20 @@ class SettingsPage extends HookConsumerWidget {
 
         if (!started) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Plain text import is already running'),
-            ),
+            SnackBar(content: Text(l10n.plainTextImportAlreadyRunning)),
           );
           return;
         }
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Import started in background')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.importStartedInBackground)));
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Import failed: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.importFailed(e.toString()))),
+        );
       }
     }
   }
@@ -497,25 +514,24 @@ class SettingsPage extends HookConsumerWidget {
     BuildContext context,
     WidgetRef ref,
   ) async {
+    final l10n = AppLocalizations.of(context)!;
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Clear All Entries?'),
-        content: const Text(
-          'This will permanently delete all entries from your shelf. '
-          'Your custom tiers will not be deleted.\n\nAre you sure?',
-        ),
+        title: Text(l10n.clearAllEntriesQuestion),
+        content: Text(l10n.clearAllEntriesWarning),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
-            child: const Text('Clear All'),
+            child: Text(l10n.clearAll),
           ),
         ],
       ),
@@ -530,13 +546,13 @@ class SettingsPage extends HookConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('All entries cleared')));
+        ).showSnackBar(SnackBar(content: Text(l10n.allEntriesCleared)));
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to clear entries: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.failedToClearEntries(e.toString()))),
+        );
       }
     }
   }
@@ -545,12 +561,13 @@ class SettingsPage extends HookConsumerWidget {
     BuildContext context,
     PlainTextImportReport report,
   ) async {
+    final l10n = AppLocalizations.of(context)!;
     final message = _buildPlainTextImportReportText(report);
 
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('纯文本导入报告'),
+        title: Text(l10n.plainTextImportReportTitle),
         content: SizedBox(
           width: 560,
           child: SingleChildScrollView(child: SelectableText(message)),
@@ -558,7 +575,7 @@ class SettingsPage extends HookConsumerWidget {
         actions: [
           FilledButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
+            child: Text(l10n.ok),
           ),
         ],
       ),
@@ -570,14 +587,15 @@ class SettingsPage extends HookConsumerWidget {
   }
 
   void _redownloadImages(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final started = ref
         .read(imageRedownloadTaskProvider.notifier)
         .startRedownload();
 
     if (!started) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Image download is already running')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.imageDownloadAlreadyRunning)));
     }
   }
 
@@ -585,22 +603,21 @@ class SettingsPage extends HookConsumerWidget {
     BuildContext context,
     WidgetRef ref,
   ) async {
+    final l10n = AppLocalizations.of(context)!;
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Clear Local Images?'),
-        content: const Text(
-          'This will delete all locally cached poster images. '
-          'Network URLs are preserved; images can be re-downloaded later.',
-        ),
+        title: Text(l10n.clearLocalImagesQuestion),
+        content: Text(l10n.clearLocalImagesWarning),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Clear'),
+            child: Text(l10n.clear),
           ),
         ],
       ),
@@ -616,14 +633,14 @@ class SettingsPage extends HookConsumerWidget {
       final freedMb = (freedBytes / (1024 * 1024)).toStringAsFixed(1);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Cleared images ($freedMb MB freed)')),
+          SnackBar(content: Text(l10n.clearedImagesFreedMb(freedMb))),
         );
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to clear images: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.failedToClearImages(e.toString()))),
+        );
       }
     }
   }
@@ -655,25 +672,27 @@ class _RenameAppDialogState extends State<_RenameAppDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return AlertDialog(
-      title: const Text('App display name'),
+      title: Text(l10n.appDisplayName),
       content: TextField(
         controller: _controller,
         autofocus: true,
-        decoration: const InputDecoration(
-          labelText: 'Name',
-          hintText: 'AnimeShelf',
+        decoration: InputDecoration(
+          labelText: l10n.name,
+          hintText: l10n.appNameHint,
         ),
         onSubmitted: (value) => Navigator.of(context).pop(value.trim()),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(null),
-          child: const Text('Cancel'),
+          child: Text(l10n.cancel),
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
-          child: const Text('Save'),
+          child: Text(l10n.save),
         ),
       ],
     );
@@ -704,8 +723,10 @@ class _PlainTextInputDialogState extends State<_PlainTextInputDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return AlertDialog(
-      title: const Text('Paste Plain Text List'),
+      title: Text(l10n.pastePlainTextList),
       content: SizedBox(
         width: 560,
         child: TextField(
@@ -715,21 +736,21 @@ class _PlainTextInputDialogState extends State<_PlainTextInputDialog> {
           maxLines: 20,
           keyboardType: TextInputType.multiline,
           textInputAction: TextInputAction.newline,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            border: const OutlineInputBorder(),
             alignLabelWithHint: true,
-            hintText: 'S\nClannad\n\nA\n欢迎加入NHK',
+            hintText: l10n.plainTextInputHint,
           ),
         ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(null),
-          child: const Text('Cancel'),
+          child: Text(l10n.cancel),
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(_controller.text),
-          child: const Text('Import'),
+          child: Text(l10n.import),
         ),
       ],
     );
@@ -751,6 +772,7 @@ class _PlainTextImportBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final report = state.report;
     final progress = state.progress;
 
@@ -772,7 +794,7 @@ class _PlainTextImportBottomSheet extends StatelessWidget {
       progressValue = 1.0;
     }
 
-    final title = _statusText(state);
+    final title = _statusText(l10n, state);
 
     return Material(
       elevation: 8,
@@ -796,14 +818,17 @@ class _PlainTextImportBottomSheet extends StatelessWidget {
               LinearProgressIndicator(value: progressValue),
               const SizedBox(height: 8),
               Text(
-                'Processed: $processedEntries/$totalEntries  '
-                'Imported: $importedCount  '
-                'Skipped: $failedCount',
+                l10n.processedImportedSkipped(
+                  processedEntries,
+                  totalEntries,
+                  importedCount,
+                  failedCount,
+                ),
               ),
               if (progress != null && progress.currentItem.isNotEmpty) ...[
                 const SizedBox(height: 4),
                 Text(
-                  'Current: ${progress.currentItem}',
+                  l10n.currentItem(progress.currentItem),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -824,19 +849,19 @@ class _PlainTextImportBottomSheet extends StatelessWidget {
                     TextButton.icon(
                       onPressed: onCancel,
                       icon: const Icon(Icons.close),
-                      label: const Text('Cancel Import'),
+                      label: Text(l10n.cancelImport),
                     ),
                   if (onViewReport != null)
                     OutlinedButton.icon(
                       onPressed: onViewReport,
                       icon: const Icon(Icons.receipt_long_outlined),
-                      label: const Text('View Report'),
+                      label: Text(l10n.viewReport),
                     ),
                   if (!state.isRunning)
                     FilledButton.icon(
                       onPressed: onClose,
                       icon: const Icon(Icons.done),
-                      label: const Text('Close'),
+                      label: Text(l10n.close),
                     ),
                 ],
               ),
@@ -847,27 +872,30 @@ class _PlainTextImportBottomSheet extends StatelessWidget {
     );
   }
 
-  String _statusText(PlainTextImportTaskState taskState) {
+  String _statusText(
+    AppLocalizations l10n,
+    PlainTextImportTaskState taskState,
+  ) {
     switch (taskState.status) {
       case PlainTextImportTaskStatus.idle:
-        return 'Import idle';
+        return l10n.importIdle;
       case PlainTextImportTaskStatus.running:
         final stage = taskState.progress?.stage;
         if (stage == PlainTextImportStage.searching) {
-          return 'Searching Bangumi...';
+          return l10n.searchingBangumi;
         }
         if (stage == PlainTextImportStage.importing) {
-          return 'Importing entries...';
+          return l10n.importingEntries;
         }
-        return 'Preparing import...';
+        return l10n.preparingImport;
       case PlainTextImportTaskStatus.cancelling:
-        return 'Cancelling import...';
+        return l10n.cancellingImport;
       case PlainTextImportTaskStatus.completed:
         return taskState.report?.cancelled == true
-            ? 'Import cancelled'
-            : 'Import completed';
+            ? l10n.importCancelled
+            : l10n.importCompleted;
       case PlainTextImportTaskStatus.failed:
-        return 'Import failed';
+        return l10n.importFailedStatus;
     }
   }
 }
@@ -880,12 +908,15 @@ class _ImageTaskBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final title = switch (state.status) {
-      ImageTaskStatus.idle => 'Idle',
-      ImageTaskStatus.running => 'Downloading images...',
-      ImageTaskStatus.completed =>
-        'Download complete (${state.succeeded}/${state.total})',
-      ImageTaskStatus.failed => 'Download failed',
+      ImageTaskStatus.idle => l10n.idle,
+      ImageTaskStatus.running => l10n.downloadingImages,
+      ImageTaskStatus.completed => l10n.downloadCompleteProgress(
+        state.succeeded,
+        state.total,
+      ),
+      ImageTaskStatus.failed => l10n.downloadFailed,
     };
 
     return Material(
@@ -910,8 +941,11 @@ class _ImageTaskBottomSheet extends StatelessWidget {
               LinearProgressIndicator(value: state.progress),
               const SizedBox(height: 8),
               Text(
-                'Processed: ${state.processed}/${state.total}  '
-                'Succeeded: ${state.succeeded}',
+                l10n.processedSucceeded(
+                  state.processed,
+                  state.total,
+                  state.succeeded,
+                ),
               ),
               if (state.errorMessage != null) ...[
                 const SizedBox(height: 8),
@@ -925,7 +959,7 @@ class _ImageTaskBottomSheet extends StatelessWidget {
                 FilledButton.icon(
                   onPressed: onClose,
                   icon: const Icon(Icons.done),
-                  label: const Text('Close'),
+                  label: Text(l10n.close),
                 ),
             ],
           ),

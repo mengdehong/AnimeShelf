@@ -4,6 +4,7 @@ import 'package:anime_shelf/core/utils/rank_utils.dart';
 import 'package:anime_shelf/features/shelf/data/shelf_repository.dart';
 import 'package:anime_shelf/features/shelf/providers/shelf_provider.dart';
 import 'package:anime_shelf/features/shelf/ui/entry_card.dart';
+import 'package:anime_shelf/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -55,6 +56,8 @@ class TierSection extends HookConsumerWidget {
     required double sectionRadius,
     required double posterRadius,
   }) {
+    final l10n = AppLocalizations.of(context)!;
+
     return DragTarget<_EntryDragData>(
       onWillAcceptWithDetails: (details) => true,
       onAcceptWithDetails: (details) {
@@ -116,7 +119,7 @@ class TierSection extends HookConsumerWidget {
                   ),
                   child: Center(
                     child: Text(
-                      tier.isInbox ? 'Search and add anime to get started' : '',
+                      tier.isInbox ? l10n.searchAndAddToGetStarted : '',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ),
@@ -237,6 +240,7 @@ class TierSection extends HookConsumerWidget {
   }
 
   Future<void> _showEditDialog(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context)!;
     final nameController = TextEditingController(text: tier.name);
     final emojiController = TextEditingController(text: tier.emoji);
 
@@ -259,7 +263,7 @@ class TierSection extends HookConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Edit Tier',
+                    l10n.editTier,
                     style: Theme.of(context).textTheme.headlineMedium,
                   ),
                   if (!tier.isInbox)
@@ -272,19 +276,19 @@ class TierSection extends HookConsumerWidget {
                         Navigator.of(context).pop();
                         _confirmDelete(context, ref);
                       },
-                      tooltip: 'Delete Tier',
+                      tooltip: l10n.deleteTier,
                     ),
                 ],
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
+                decoration: InputDecoration(labelText: l10n.name),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: emojiController,
-                decoration: const InputDecoration(labelText: 'Emoji'),
+                decoration: InputDecoration(labelText: l10n.emoji),
               ),
               const SizedBox(height: 24),
               FilledButton(
@@ -298,7 +302,7 @@ class TierSection extends HookConsumerWidget {
                       );
                   Navigator.of(context).pop();
                 },
-                child: const Text('Save'),
+                child: Text(l10n.save),
               ),
             ],
           ),
@@ -311,22 +315,24 @@ class TierSection extends HookConsumerWidget {
   }
 
   void _confirmDelete(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Tier?'),
-        content: Text('Entries in "${tier.name}" will be moved to Inbox.'),
+        title: Text(l10n.deleteTierQuestion),
+        content: Text(l10n.entriesMovedToInbox(tier.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () {
               ref.read(shelfRepositoryProvider).deleteTier(tier.id);
               Navigator.of(context).pop();
             },
-            child: const Text('Delete'),
+            child: Text(l10n.delete),
           ),
         ],
       ),

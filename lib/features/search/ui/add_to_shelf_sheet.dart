@@ -4,6 +4,7 @@ import 'package:anime_shelf/core/providers.dart';
 import 'package:anime_shelf/features/search/data/bangumi_subject.dart';
 import 'package:anime_shelf/features/search/providers/search_provider.dart';
 import 'package:anime_shelf/features/shelf/providers/shelf_provider.dart';
+import 'package:anime_shelf/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -19,6 +20,7 @@ class AddToShelfSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tiersAsync = ref.watch(shelfTiersProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
@@ -27,7 +29,7 @@ class AddToShelfSheet extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Add to Shelf',
+            l10n.addToShelf,
             style: Theme.of(context).textTheme.headlineMedium,
           ),
           const SizedBox(height: 8),
@@ -40,7 +42,7 @@ class AddToShelfSheet extends ConsumerWidget {
           const SizedBox(height: 16),
           tiersAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Text('Error: $e'),
+            error: (e, _) => Text(l10n.errorWithDetails(e.toString())),
             data: (tiers) => Column(
               children: tiers.map((tierData) {
                 final tier = tierData.tier;
@@ -68,6 +70,7 @@ class AddToShelfSheet extends ConsumerWidget {
     WidgetRef ref,
     int tierId,
   ) async {
+    final l10n = AppLocalizations.of(context)!;
     final searchRepo = ref.read(searchRepositoryProvider);
     final shelfRepo = ref.read(shelfRepositoryProvider);
 
@@ -77,7 +80,7 @@ class AddToShelfSheet extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Already on your shelf')));
+        ).showSnackBar(SnackBar(content: Text(l10n.alreadyOnShelf)));
         Navigator.of(context).pop();
       }
       return;
@@ -103,7 +106,7 @@ class AddToShelfSheet extends ConsumerWidget {
       Navigator.of(context).pop();
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Added to shelf')));
+      ).showSnackBar(SnackBar(content: Text(l10n.addedToShelf)));
     }
   }
 }

@@ -217,7 +217,7 @@ class ExportService {
   Future<String> exportCsv() async {
     final tiersData = await _shelfRepo.watchTiersWithEntries().first;
     final buffer = StringBuffer();
-    buffer.writeln('Tier,Title,Original Title,Air Date,Rating,Note');
+    buffer.writeln('分组,标题,原名,放送日期,评分,备注');
 
     for (final tierData in tiersData) {
       for (final entryData in tierData.entries) {
@@ -597,7 +597,7 @@ class ExportService {
             processedEntries += 1;
             processedLineNumbers.add(line.lineNumber);
 
-            final displayTitle = top1 != null ? _displayTitle(top1) : 'Unknown';
+            final displayTitle = top1 != null ? _displayTitle(top1) : '未知';
             final reason = resolution.reason ?? 'low confidence';
             lowConfidenceEntries.add(
               'L${line.lineNumber}: ${line.query} -> '
@@ -854,7 +854,7 @@ class ExportService {
 
   String _plainTextTitle(Subject? subject) {
     if (subject == null) {
-      return 'Unknown';
+      return '未知';
     }
 
     if (subject.nameCn.isNotEmpty) {
@@ -865,7 +865,7 @@ class ExportService {
       return subject.nameJp;
     }
 
-    return 'Unknown';
+    return '未知';
   }
 
   String _normalizeTierHeaderCandidate(String line) {
@@ -1219,7 +1219,7 @@ class ExportService {
     if (subject.name.isNotEmpty) {
       return subject.name;
     }
-    return 'Unknown';
+    return '未知';
   }
 }
 

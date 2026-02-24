@@ -320,10 +320,5 @@ class AppTheme {
     return _allThemes[index];
   }
 
-  static const List<String> themeNames = [
-    'Bilibili Red',
-    'Dark',
-    'Pixiv Blue',
-    'Miku Teal',
-  ];
+  static const List<String> themeNames = ['哔哩红', '深色', 'Pixiv 蓝', '初音青'];
 }

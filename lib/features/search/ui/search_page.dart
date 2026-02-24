@@ -3,6 +3,7 @@ import 'package:anime_shelf/core/window/fused_app_bar.dart';
 import 'package:anime_shelf/features/search/data/bangumi_subject.dart';
 import 'package:anime_shelf/features/search/providers/search_provider.dart';
 import 'package:anime_shelf/features/search/ui/add_to_shelf_sheet.dart';
+import 'package:anime_shelf/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -18,6 +19,7 @@ class SearchPage extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = useTextEditingController();
     final resultsAsync = ref.watch(searchResultsProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: FusedAppBar(
@@ -25,10 +27,10 @@ class SearchPage extends HookConsumerWidget {
         title: TextField(
           controller: controller,
           autofocus: true,
-          decoration: const InputDecoration(
-            hintText: 'Search anime...',
+          decoration: InputDecoration(
+            hintText: l10n.searchAnimeHint,
             border: InputBorder.none,
-            prefixIcon: Icon(Icons.search),
+            prefixIcon: const Icon(Icons.search),
           ),
           onChanged: (value) {
             ref.read(searchQueryProvider.notifier).update(value);
@@ -43,11 +45,11 @@ class SearchPage extends HookConsumerWidget {
             children: [
               const Icon(Icons.error_outline, size: 48),
               const SizedBox(height: 16),
-              Text('Search failed: $error'),
+              Text(l10n.searchFailed(error.toString())),
               const SizedBox(height: 8),
               FilledButton(
                 onPressed: () => ref.invalidate(searchResultsProvider),
-                child: const Text('Retry'),
+                child: Text(l10n.retry),
               ),
             ],
           ),
@@ -56,9 +58,9 @@ class SearchPage extends HookConsumerWidget {
           if (results.isEmpty) {
             final query = ref.read(searchQueryProvider);
             if (query.trim().isEmpty) {
-              return const Center(child: Text('Type to search Bangumi'));
+              return Center(child: Text(l10n.typeToSearchBangumi));
             }
-            return const Center(child: Text('No results found'));
+            return Center(child: Text(l10n.noResultsFound));
           }
           return ListView.builder(
             padding: const EdgeInsets.symmetric(vertical: 8),

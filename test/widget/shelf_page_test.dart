@@ -3,6 +3,7 @@ import 'package:anime_shelf/core/providers.dart';
 import 'package:anime_shelf/features/shelf/data/shelf_repository.dart';
 import 'package:anime_shelf/features/shelf/ui/entry_card.dart';
 import 'package:anime_shelf/features/shelf/ui/shelf_page.dart';
+import 'package:anime_shelf/l10n/app_localizations.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -19,7 +20,16 @@ Widget _testApp({
 }) {
   return ProviderScope(
     overrides: [databaseProvider.overrideWithValue(db), ...extraOverrides],
-    child: MaterialApp(home: child),
+    child: _localizedMaterialApp(home: child),
+  );
+}
+
+Widget _localizedMaterialApp({required Widget home}) {
+  return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    locale: const Locale('zh'),
+    home: home,
   );
 }
 
@@ -36,7 +46,7 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
+        _localizedMaterialApp(
           home: Scaffold(
             body: SizedBox(
               width: 110,
@@ -59,7 +69,7 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
+        _localizedMaterialApp(
           home: Scaffold(
             body: SizedBox(
               width: 110,
@@ -73,13 +83,13 @@ void main() {
       expect(find.text('Steins;Gate'), findsOneWidget);
     });
 
-    testWidgets('shows "Unknown" when no subject', (tester) async {
+    testWidgets('shows "未知" when no subject', (tester) async {
       final entryData = EntryWithSubject(
         entry: _fakeEntry(id: 1, tierId: 1, rank: 1000.0),
       );
 
       await tester.pumpWidget(
-        MaterialApp(
+        _localizedMaterialApp(
           home: Scaffold(
             body: SizedBox(
               width: 110,
@@ -90,7 +100,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Unknown'), findsOneWidget);
+      expect(find.text('未知'), findsOneWidget);
     });
 
     testWidgets('calls onTap when tapped', (tester) async {
@@ -101,7 +111,7 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
+        _localizedMaterialApp(
           home: Scaffold(
             body: SizedBox(
               width: 110,
@@ -126,7 +136,7 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
+        _localizedMaterialApp(
           home: Scaffold(
             body: SizedBox(
               width: 110,
@@ -178,7 +188,7 @@ void main() {
       await tester.pumpWidget(_testApp(child: const ShelfPage(), db: db));
       await tester.pumpAndSettle();
 
-      expect(find.text('Search Bangumi...'), findsOneWidget);
+      expect(find.text('搜索 Bangumi...'), findsOneWidget);
 
       await db.close();
     });
@@ -202,7 +212,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // The search bar is embedded in the AppBar (no FAB).
-      expect(find.text('Search Bangumi...'), findsOneWidget);
+      expect(find.text('搜索 Bangumi...'), findsOneWidget);
       expect(find.byIcon(Icons.search), findsOneWidget);
 
       await db.close();
@@ -219,8 +229,8 @@ void main() {
       await tester.tap(find.byIcon(Icons.add));
       await tester.pumpAndSettle();
 
-      expect(find.text('New Tier'), findsOneWidget);
-      expect(find.text('Add Tier'), findsOneWidget);
+      expect(find.text('新建分组'), findsOneWidget);
+      expect(find.text('添加分组'), findsOneWidget);
 
       await db.close();
     });
@@ -232,7 +242,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Inbox shows special message, other tiers show empty text
-      expect(find.text('Search and add anime to get started'), findsOneWidget);
+      expect(find.text('搜索并添加动画即可开始'), findsOneWidget);
       expect(find.text(''), findsAtLeastNWidgets(3));
 
       await db.close();
@@ -250,7 +260,7 @@ void main() {
       await tester.tap(find.text('Inbox'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Edit Tier'), findsOneWidget);
+      expect(find.text('编辑分组'), findsOneWidget);
 
       await db.close();
     });
@@ -270,7 +280,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Dialog should have a delete button
-      expect(find.byTooltip('Delete Tier'), findsOneWidget);
+      expect(find.byTooltip('删除分组'), findsOneWidget);
 
       await db.close();
     });
