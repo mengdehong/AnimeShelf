@@ -6,6 +6,7 @@ import 'package:anime_shelf/features/shelf/data/shelf_repository.dart';
 import 'package:anime_shelf/features/shelf/providers/shelf_provider.dart';
 import 'package:anime_shelf/features/shelf/ui/tier_section.dart';
 import 'package:anime_shelf/l10n/app_localizations.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -16,11 +17,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 /// Tier ordering is managed from a dedicated bottom sheet.
 class ShelfPage extends HookConsumerWidget {
   const ShelfPage({super.key});
-
-  static const _addTierSheetAnimationStyle = AnimationStyle(
-    duration: Duration(milliseconds: 100),
-    reverseDuration: Duration(milliseconds: 90),
-  );
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -38,13 +34,9 @@ class ShelfPage extends HookConsumerWidget {
           IconButton(
             icon: const Icon(Icons.reorder),
             tooltip: 'Manage Tier Order',
-            onPressed: loadedTiers == null || loadedTiers.length < 2
+            onPressed: loadedTiers == null
                 ? null
                 : () => _showManageTierOrderSheet(context, ref, loadedTiers),
-          ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () => _showAddTierDialog(context, ref),
           ),
           IconButton(
             icon: const Icon(Icons.settings),
@@ -125,117 +117,20 @@ class ShelfPage extends HookConsumerWidget {
     return buildPlainTextImportReportText(report);
   }
 
-  Future<void> _showAddTierDialog(BuildContext context, WidgetRef ref) async {
-    final l10n = AppLocalizations.of(context)!;
-    final nameController = TextEditingController();
-    final emojiController = TextEditingController();
-    var selectedColor = 0xFF2196F3;
-
-    try {
-      await showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        sheetAnimationStyle: _addTierSheetAnimationStyle,
-        builder: (context) => Padding(
-          padding: EdgeInsets.only(
-            left: 24,
-            right: 24,
-            top: 24,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                l10n.newTier,
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  labelText: l10n.name,
-                  hintText: l10n.tierNameHint,
-                ),
-                autofocus: true,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: emojiController,
-                decoration: InputDecoration(
-                  labelText: l10n.emojiOptional,
-                  hintText: l10n.emojiHint,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                children:
-                    [
-                      0xFFFFD700,
-                      0xFFFF6B6B,
-                      0xFF4ECDC4,
-                      0xFF45B7D1,
-                      0xFFFFA07A,
-                      0xFF98D8C8,
-                      0xFFB19CD9,
-                      0xFFFF69B4,
-                    ].map((color) {
-                      return GestureDetector(
-                        onTap: () => selectedColor = color,
-                        child: CircleAvatar(
-                          radius: 18,
-                          backgroundColor: Color(color),
-                        ),
-                      );
-                    }).toList(),
-              ),
-              const SizedBox(height: 24),
-              FilledButton(
-                onPressed: () {
-                  final name = nameController.text.trim();
-                  if (name.isEmpty) {
-                    return;
-                  }
-                  ref
-                      .read(shelfRepositoryProvider)
-                      .addTier(
-                        name: name,
-                        emoji: emojiController.text.trim(),
-                        colorValue: selectedColor,
-                      );
-                  Navigator.of(context).pop();
-                },
-                child: Text(l10n.addTier),
-              ),
-            ],
-          ),
-        ),
-      );
-    } finally {
-      nameController.dispose();
-      emojiController.dispose();
-    }
-  }
-
   Future<void> _showManageTierOrderSheet(
     BuildContext context,
     WidgetRef ref,
     List<TierWithEntries> tiers,
   ) async {
+    final repository = ref.read(shelfRepositoryProvider);
+
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
       builder: (context) {
-        return _ManageTierOrderSheet(
-          tiers: tiers,
-          onSave: (orderedTierIds) {
-            return ref
-                .read(shelfRepositoryProvider)
-                .setTierOrder(orderedTierIds);
-          },
-        );
+        return _ManageTierOrderSheet(tiers: tiers, repository: repository);
       },
     );
   }
@@ -273,108 +168,478 @@ class _ShelfContent extends StatelessWidget {
 
 class _ManageTierOrderSheet extends StatefulWidget {
   final List<TierWithEntries> tiers;
-  final Future<void> Function(List<int> orderedTierIds) onSave;
+  final ShelfRepository repository;
 
-  const _ManageTierOrderSheet({required this.tiers, required this.onSave});
+  const _ManageTierOrderSheet({required this.tiers, required this.repository});
 
   @override
   State<_ManageTierOrderSheet> createState() => _ManageTierOrderSheetState();
 }
 
+sealed class _ManagedTierListItem {
+  const _ManagedTierListItem();
+
+  String get itemKey;
+  String get name;
+  String get emoji;
+  int get colorValue;
+  bool get isInbox;
+}
+
+class _ExistingManagedTierItem extends _ManagedTierListItem {
+  final TierWithEntries tierData;
+
+  const _ExistingManagedTierItem(this.tierData);
+
+  @override
+  String get itemKey => 'existing-${tierData.tier.id}';
+
+  @override
+  String get name => tierData.tier.name;
+
+  @override
+  String get emoji => tierData.tier.emoji;
+
+  @override
+  int get colorValue => tierData.tier.colorValue;
+
+  @override
+  bool get isInbox => tierData.tier.isInbox;
+
+  int get tierId => tierData.tier.id;
+}
+
+class _PendingManagedTierItem extends _ManagedTierListItem {
+  final int localId;
+
+  @override
+  final String name;
+
+  @override
+  final String emoji;
+
+  @override
+  final int colorValue;
+
+  const _PendingManagedTierItem({
+    required this.localId,
+    required this.name,
+    required this.emoji,
+    required this.colorValue,
+  });
+
+  @override
+  String get itemKey => 'pending-$localId';
+
+  @override
+  bool get isInbox => false;
+}
+
 class _ManageTierOrderSheetState extends State<_ManageTierOrderSheet> {
-  late final List<TierWithEntries> _orderedTiers;
+  static const _colorOptions = <int>[
+    0xFFFFD700,
+    0xFFFF6B6B,
+    0xFF4ECDC4,
+    0xFF45B7D1,
+    0xFFFFA07A,
+    0xFF98D8C8,
+    0xFFB19CD9,
+    0xFFFF69B4,
+  ];
+
+  late final List<_ManagedTierListItem> _orderedTiers;
+  late final List<int> _initialExistingTierOrder;
+  late final TextEditingController _nameController;
+  late final TextEditingController _emojiController;
+  final ScrollController _listScrollController = ScrollController();
   var _isSaving = false;
+  var _isAddingTier = false;
+  var _pendingIdSeed = 0;
+  var _selectedColor = _colorOptions.first;
 
   @override
   void initState() {
     super.initState();
-    _orderedTiers = widget.tiers.toList(growable: true);
+    _orderedTiers = widget.tiers
+        .map<_ManagedTierListItem>(
+          (tierData) => _ExistingManagedTierItem(tierData),
+        )
+        .toList(growable: true);
+    _initialExistingTierOrder = _orderedTiers
+        .whereType<_ExistingManagedTierItem>()
+        .map((item) => item.tierId)
+        .toList(growable: false);
+    _nameController = TextEditingController();
+    _emojiController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _listScrollController.dispose();
+    _nameController.dispose();
+    _emojiController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-        child: SizedBox(
-          height: MediaQuery.sizeOf(context).height * 0.72,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Manage Tier Order',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Drag tiers to reorder them. This only changes section order.',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 12),
-              Expanded(
-                child: ReorderableListView.builder(
-                  itemCount: _orderedTiers.length,
-                  buildDefaultDragHandles: false,
-                  onReorder: _onReorder,
-                  itemBuilder: (context, index) {
-                    final tier = _orderedTiers[index].tier;
-                    return ListTile(
-                      key: ValueKey(tier.id),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+    final canSave = !_isSaving && !_isAddingTier && _hasPersistedChanges;
+
+    return PopScope(
+      canPop: !_isSaving && !_hasUnsavedChanges,
+      onPopInvokedWithResult: _onPopInvokedWithResult,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+          child: SizedBox(
+            height: MediaQuery.sizeOf(context).height * 0.78,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Manage Tiers',
+                        style: Theme.of(context).textTheme.titleLarge,
                       ),
-                      leading: Container(
-                        width: 12,
-                        height: 12,
-                        decoration: BoxDecoration(
-                          color: Color(tier.colorValue),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      title: Text(
-                        tier.emoji.isEmpty
-                            ? tier.name
-                            : '${tier.emoji} ${tier.name}',
-                      ),
-                      subtitle: tier.isInbox
-                          ? const Text('Inbox tier')
-                          : const Text('Custom tier'),
-                      trailing: ReorderableDragStartListener(
-                        index: index,
-                        child: const Icon(Icons.drag_indicator),
-                      ),
-                    );
-                  },
+                    ),
+                    TextButton.icon(
+                      onPressed: _isSaving || _isAddingTier
+                          ? null
+                          : _startAddTier,
+                      icon: const Icon(Icons.add),
+                      label: const Text('New Tier'),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: _isSaving
-                        ? null
-                        : () => Navigator.of(context).pop(),
-                    child: const Text('Cancel'),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    onPressed: _isSaving ? null : _save,
-                    child: _isSaving
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Save Order'),
-                  ),
+                const SizedBox(height: 8),
+                Text(
+                  'Drag tiers to reorder them or add a new tier. '
+                  'Changes apply when you save.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 12),
+                if (_isAddingTier) ...[
+                  _buildAddTierCard(context),
+                  const SizedBox(height: 12),
                 ],
-              ),
-            ],
+                Expanded(
+                  child: ReorderableListView.builder(
+                    scrollController: _listScrollController,
+                    itemCount: _orderedTiers.length,
+                    buildDefaultDragHandles: false,
+                    onReorder: _onReorder,
+                    itemBuilder: (context, index) {
+                      final item = _orderedTiers[index];
+                      final title = item.emoji.isEmpty
+                          ? item.name
+                          : '${item.emoji} ${item.name}';
+
+                      return ListTile(
+                        key: ValueKey(item.itemKey),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        leading: Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: Color(item.colorValue),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        title: Text(title),
+                        subtitle: Text(_tierSubtitle(item)),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (item is _PendingManagedTierItem)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.secondaryContainer,
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  'New',
+                                  style: Theme.of(context).textTheme.labelSmall
+                                      ?.copyWith(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSecondaryContainer,
+                                      ),
+                                ),
+                              ),
+                            ReorderableDragStartListener(
+                              index: index,
+                              child: const Icon(Icons.drag_indicator),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: _isSaving ? null : _handleCancel,
+                      child: const Text('Cancel'),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: canSave ? _save : null,
+                      child: _isSaving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Save Changes'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildAddTierCard(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Theme.of(context).dividerColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('New Tier', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _nameController,
+            decoration: InputDecoration(
+              labelText: l10n.name,
+              hintText: l10n.tierNameHint,
+            ),
+            autofocus: true,
+            textInputAction: TextInputAction.next,
+            enabled: !_isSaving,
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _emojiController,
+            decoration: InputDecoration(
+              labelText: l10n.emojiOptional,
+              hintText: l10n.emojiHint,
+            ),
+            enabled: !_isSaving,
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _colorOptions
+                .map((colorValue) {
+                  final isSelected = _selectedColor == colorValue;
+
+                  return InkWell(
+                    onTap: _isSaving
+                        ? null
+                        : () {
+                            setState(() {
+                              _selectedColor = colorValue;
+                            });
+                          },
+                    borderRadius: BorderRadius.circular(20),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 120),
+                      width: 30,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: Color(colorValue),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isSelected
+                              ? Theme.of(context).colorScheme.onSurface
+                              : Colors.transparent,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  );
+                })
+                .toList(growable: false),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: _isSaving ? null : _cancelAddTier,
+                child: const Text('Cancel Add'),
+              ),
+              const SizedBox(width: 8),
+              FilledButton(
+                onPressed: _isSaving ? null : _addPendingTier,
+                child: const Text('Add to List'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _tierSubtitle(_ManagedTierListItem item) {
+    if (item is _PendingManagedTierItem) {
+      return 'New tier (unsaved)';
+    }
+    if (item.isInbox) {
+      return 'Inbox tier';
+    }
+    return 'Custom tier';
+  }
+
+  Future<void> _handleCancel() async {
+    final shouldClose = await _confirmDiscardChanges();
+    if (!mounted || !shouldClose) {
+      return;
+    }
+    Navigator.of(context).pop();
+  }
+
+  void _onPopInvokedWithResult(bool didPop, Object? result) {
+    if (didPop || _isSaving) {
+      return;
+    }
+    _handleCancel();
+  }
+
+  Future<bool> _confirmDiscardChanges() async {
+    if (!_hasUnsavedChanges) {
+      return true;
+    }
+
+    final shouldDiscard =
+        await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Discard changes?'),
+            content: const Text(
+              'You have unsaved tier changes. Discard them and close?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Keep Editing'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Discard'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+
+    return shouldDiscard;
+  }
+
+  bool get _hasPendingTiers {
+    return _orderedTiers.any((item) => item is _PendingManagedTierItem);
+  }
+
+  bool get _hasReorderedExistingTiers {
+    final currentExistingOrder = _orderedTiers
+        .whereType<_ExistingManagedTierItem>()
+        .map((item) => item.tierId)
+        .toList(growable: false);
+    return !listEquals(currentExistingOrder, _initialExistingTierOrder);
+  }
+
+  bool get _hasDraftInput {
+    if (!_isAddingTier) {
+      return false;
+    }
+    return _nameController.text.trim().isNotEmpty ||
+        _emojiController.text.trim().isNotEmpty;
+  }
+
+  bool get _hasPersistedChanges {
+    return _hasPendingTiers || _hasReorderedExistingTiers;
+  }
+
+  bool get _hasUnsavedChanges {
+    return _hasPersistedChanges || _hasDraftInput;
+  }
+
+  void _startAddTier() {
+    setState(() {
+      _isAddingTier = true;
+      _selectedColor = _colorOptions.first;
+      _nameController.clear();
+      _emojiController.clear();
+    });
+  }
+
+  void _cancelAddTier() {
+    setState(() {
+      _isAddingTier = false;
+      _nameController.clear();
+      _emojiController.clear();
+      _selectedColor = _colorOptions.first;
+    });
+  }
+
+  void _addPendingTier() {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Tier name is required')));
+      return;
+    }
+
+    final pendingItem = _PendingManagedTierItem(
+      localId: _pendingIdSeed,
+      name: name,
+      emoji: _emojiController.text.trim(),
+      colorValue: _selectedColor,
+    );
+
+    setState(() {
+      _pendingIdSeed += 1;
+      _orderedTiers.add(pendingItem);
+      _isAddingTier = false;
+      _nameController.clear();
+      _emojiController.clear();
+      _selectedColor = _colorOptions.first;
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_listScrollController.hasClients) {
+        return;
+      }
+      _listScrollController.animateTo(
+        _listScrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   void _onReorder(int oldIndex, int newIndex) {
@@ -397,9 +662,21 @@ class _ManageTierOrderSheetState extends State<_ManageTierOrderSheet> {
     });
 
     try {
-      await widget.onSave(
+      await widget.repository.saveTierManagementChanges(
         _orderedTiers
-            .map((tierData) => tierData.tier.id)
+            .map((item) {
+              if (item is _ExistingManagedTierItem) {
+                return TierManagementItem.existing(tierId: item.tierId);
+              }
+              final pending = item as _PendingManagedTierItem;
+              return TierManagementItem.pending(
+                pendingTier: PendingTierDraft(
+                  name: pending.name,
+                  emoji: pending.emoji,
+                  colorValue: pending.colorValue,
+                ),
+              );
+            })
             .toList(growable: false),
       );
       if (!mounted) {
@@ -411,7 +688,7 @@ class _ManageTierOrderSheetState extends State<_ManageTierOrderSheet> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to save tier order')),
+        const SnackBar(content: Text('Failed to save tier changes')),
       );
     } finally {
       if (mounted) {

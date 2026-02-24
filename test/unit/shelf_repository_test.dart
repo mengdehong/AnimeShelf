@@ -1,4 +1,5 @@
 import 'package:anime_shelf/core/database/app_database.dart';
+import 'package:anime_shelf/core/exceptions/database_exception.dart';
 import 'package:anime_shelf/features/shelf/data/shelf_repository.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
@@ -104,6 +105,64 @@ void main() {
       expect(reordered[1].tierSort, equals(2000.0));
       expect(reordered.last.tierSort, equals(8000.0));
     });
+
+    test('saveTierManagementChanges creates pending tiers and order', () async {
+      final tiers = await (db.select(
+        db.tiers,
+      )..orderBy([(t) => OrderingTerm.asc(t.tierSort)])).get();
+      final inbox = tiers.firstWhere((tier) => tier.isInbox);
+      final sss = tiers.firstWhere((tier) => tier.name == 'SSS');
+      final remaining = tiers
+          .where((tier) => tier.id != inbox.id && tier.id != sss.id)
+          .toList(growable: false);
+
+      final orderedItems = <TierManagementItem>[
+        TierManagementItem.existing(tierId: inbox.id),
+        const TierManagementItem.pending(
+          pendingTier: PendingTierDraft(
+            name: 'S+',
+            emoji: '✨',
+            colorValue: 0xFF123456,
+          ),
+        ),
+        TierManagementItem.existing(tierId: sss.id),
+        ...remaining.map(
+          (tier) => TierManagementItem.existing(tierId: tier.id),
+        ),
+      ];
+
+      await repo.saveTierManagementChanges(orderedItems);
+
+      final reordered = await (db.select(
+        db.tiers,
+      )..orderBy([(t) => OrderingTerm.asc(t.tierSort)])).get();
+
+      expect(reordered.length, equals(9));
+      expect(reordered[0].id, equals(inbox.id));
+      expect(reordered[1].name, equals('S+'));
+      expect(reordered[1].emoji, equals('✨'));
+      expect(reordered[1].tierSort, equals(2000.0));
+      expect(reordered.last.tierSort, equals(9000.0));
+    });
+
+    test(
+      'saveTierManagementChanges validates existing tier coverage',
+      () async {
+        final tiers = await db.select(db.tiers).get();
+        final missingOne = tiers
+            .skip(1)
+            .map((tier) => TierManagementItem.existing(tierId: tier.id))
+            .toList(growable: false);
+
+        await expectLater(
+          () => repo.saveTierManagementChanges(missingOne),
+          throwsA(isA<DatabaseException>()),
+        );
+
+        final unchanged = await db.select(db.tiers).get();
+        expect(unchanged.length, equals(8));
+      },
+    );
 
     test('recompressTierSorts evenly spaces tiers', () async {
       // Mess up tier sorts to be very close

@@ -192,16 +192,14 @@ void main() {
       await db.close();
     });
 
-    testWidgets('has tier reorder, add, and settings action buttons', (
-      tester,
-    ) async {
+    testWidgets('has tier reorder and settings action buttons', (tester) async {
       final db = _createTestDb();
 
       await tester.pumpWidget(_testApp(child: const ShelfPage(), db: db));
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.reorder), findsOneWidget);
-      expect(find.byIcon(Icons.add), findsOneWidget);
+      expect(find.byIcon(Icons.add), findsNothing);
       expect(find.byIcon(Icons.settings), findsOneWidget);
 
       await db.close();
@@ -220,23 +218,6 @@ void main() {
       await db.close();
     });
 
-    testWidgets('AppBar add button opens add tier bottom sheet', (
-      tester,
-    ) async {
-      final db = _createTestDb();
-
-      await tester.pumpWidget(_testApp(child: const ShelfPage(), db: db));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byIcon(Icons.add));
-      await tester.pumpAndSettle();
-
-      expect(find.text('新建分组'), findsOneWidget);
-      expect(find.text('添加分组'), findsOneWidget);
-
-      await db.close();
-    });
-
     testWidgets('tier reorder button opens manage order bottom sheet', (
       tester,
     ) async {
@@ -248,8 +229,33 @@ void main() {
       await tester.tap(find.byIcon(Icons.reorder));
       await tester.pumpAndSettle();
 
-      expect(find.text('Manage Tier Order'), findsOneWidget);
-      expect(find.text('Save Order'), findsOneWidget);
+      expect(find.text('Manage Tiers'), findsOneWidget);
+      expect(find.text('Save Changes'), findsOneWidget);
+      expect(find.text('New Tier'), findsOneWidget);
+
+      await db.close();
+    });
+
+    testWidgets('manage sheet can stage a new tier before save', (
+      tester,
+    ) async {
+      final db = _createTestDb();
+
+      await tester.pumpWidget(_testApp(child: const ShelfPage(), db: db));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.reorder));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(TextButton, 'New Tier'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField).first, 'S+');
+      await tester.tap(find.text('Add to List'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('S+'), findsOneWidget);
+      expect(find.text('New tier (unsaved)'), findsOneWidget);
 
       await db.close();
     });
