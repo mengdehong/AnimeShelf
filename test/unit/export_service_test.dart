@@ -131,10 +131,7 @@ void main() {
   group('exportCsv', () {
     test('produces CSV header', () async {
       final csv = await exportService.exportCsv();
-      expect(
-        csv.startsWith('Tier,Title,Original Title,Air Date,Rating,Note'),
-        isTrue,
-      );
+      expect(csv.startsWith('分组,标题,原名,放送日期,评分,备注'), isTrue);
     });
 
     test('includes entry data rows', () async {
