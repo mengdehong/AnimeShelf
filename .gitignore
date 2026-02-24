@@ -58,3 +58,6 @@ app.*.map.json
 
 # Local act simulation files
 /.github/act/
+
+# Local planning notes
+/docs/TODOLISST.md

@@ -133,7 +133,7 @@ jobs:
         shell: cmd
         run: |
           if not exist dist mkdir dist
-          makensis /DVERSION=%GITHUB_REF_NAME% /DOUTPUT_FILE=dist\AnimeShelf-%GITHUB_REF_NAME%-windows-x64-setup.exe windows\installer\installer.nsi
+          "C:\Program Files (x86)\NSIS\makensis.exe" /DVERSION=%GITHUB_REF_NAME% windows\installer\installer.nsi
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4

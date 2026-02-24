@@ -6,10 +6,10 @@
 
 ### 平台范围 (Platforms)
 
-* **首发目标**：Android + 桌面端。
-* **桌面端优先级**：Linux（Wayland）优先；Windows 可后置。
-* **分发策略（桌面端）**：先支持开发态运行/压缩包分发；暂不考虑商店/沙盒打包（Flatpak/Snap 等）与平板适配。
-* **桌面端产物结构**：`flutter build linux --release` 输出 `bundle/` 目录（含可执行文件、`lib/` 动态库、`data/` 资产），整体压缩分发。依赖：GTK 3.x（主流发行版已内置）；SQLite 通过 `sqlite3_flutter_libs` 随 app 捆绑，无需用户单独安装。
+* **首发目标**：Android + Linux + Windows。
+* **桌面端策略**：Linux（Wayland）与 Windows 同步支持，Linux 优先源码编译、AUR 与通用安装包分发。
+* **分发策略（桌面端）**：Linux 提供源码编译、AUR 包（`animeshelf`）与通用压缩包；Windows 提供 NSIS `exe` 安装包；暂不考虑商店/沙盒打包（Flatpak/Snap/MSIX 等）与平板适配。
+* **桌面端产物结构**：`flutter build linux --release` 输出 `bundle/` 目录（含可执行文件、`lib/` 动态库、`data/` 资产）并整体压缩分发；`flutter build windows --release` 生成 Release 目录，由 NSIS 打包为安装器。Linux 依赖 GTK 3.x（主流发行版已内置）；SQLite 通过 `sqlite3_flutter_libs` 随 app 捆绑，无需用户单独安装。
 
 ## 二、 核心功能清单 (Feature List)
 
@@ -19,7 +19,7 @@
 * **优雅降级**：网络延迟时展示“骨架屏”或“ACG趣味占位图”。
 * **便捷收录**：一键收录，并弹出精美的 BottomSheet 选择归属等级。
 * **接口策略**：先使用 Bangumi **公开接口**；如后续出现频率/权限需求再考虑切换到鉴权方案。
-* **User-Agent**：所有请求携带固定头 `User-Agent: AnimeShelf/1.0 (https://github.com/your-repo/animeshelf)`，遵循 Bangumi API 使用规范。批量刷新并发上限 ≤ 3，失败后指数退避重试（1s → 2s → 4s，最多 3 次）。
+* **User-Agent**：所有请求携带固定头 `User-Agent: AnimeShelf/1.0 (https://github.com/mengdehong/AnimeShelf)`，遵循 Bangumi API 使用规范。批量刷新并发上限 ≤ 3，失败后指数退避重试（1s → 2s → 4s，最多 3 次）。
 
 ### 1.1 数据边界与刷新 (Data Boundary & Refresh)
 
@@ -70,7 +70,7 @@
 
 * **原生备份**：导出/导入`.json`（或专属后缀`.animeshelf`）全量数据。
 * **表格导出**：导出 CSV 格式（含评级、番名、评分、本地长评论），方便 Excel 处理。
-* **文档导出**：Markdown 导出，采用优雅的“大纲+引用”策略排版，适合一键分享到博客。
+* **文档导出**：纯文本（`.txt`）导出，格式贴近纯文本导入（分组标题 + 每行一条目），便于直接复制回导入。
 * **导出范围**：默认全量导出（后续如体验更好可增加筛选导出）。
 
 ### 5. 视觉与主题引擎 (Design & Theming)
@@ -123,7 +123,7 @@
 │   │   ├── providers.g.dart                           # Generated
 │   │   └── utils/
 │   │       ├── rank_utils.dart                        # insertRank, needsRecompression, recompressRanks
-│   │       └── export_service.dart                    # JSON/CSV/MD export + JSON import
+│   │       └── export_service.dart                    # JSON/CSV/TXT export + JSON import
 │   ├── models/
 │   │   ├── tier.dart                                  # Drift Tiers table
 │   │   ├── subject.dart                               # Drift Subjects table (custom PK: subjectId)

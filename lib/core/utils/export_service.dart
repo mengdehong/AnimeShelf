@@ -124,7 +124,7 @@ class PlainTextImportReport {
   });
 }
 
-/// Service handling JSON/CSV/Markdown export and JSON import.
+/// Service handling JSON/CSV/plain-text export and JSON import.
 class ExportService {
   final AppDatabase _db;
   final ShelfRepository _shelfRepo;
@@ -244,59 +244,47 @@ class ExportService {
     await Share.shareXFiles([XFile(file.path)]);
   }
 
-  // ── Markdown Export ──
+  // ── Plain Text Export ──
 
-  /// Exports shelf data as a Markdown document.
-  Future<String> exportMarkdown() async {
+  /// Exports shelf data as plain text.
+  ///
+  /// Output format follows plain-text import style:
+  /// - Tier name on a standalone line
+  /// - One anime title per line under the tier
+  /// - Blank line between tiers
+  Future<String> exportPlainText() async {
     final tiersData = await _shelfRepo.watchTiersWithEntries().first;
+    final nonEmptyTiers = tiersData
+        .where((tierData) => tierData.entries.isNotEmpty)
+        .toList(growable: false);
+
+    if (nonEmptyTiers.isEmpty) {
+      return '';
+    }
+
     final buffer = StringBuffer();
-    buffer.writeln('# AnimeShelf Export');
-    buffer.writeln();
-    buffer.writeln(
-      '> Exported on ${DateTime.now().toIso8601String().substring(0, 10)}',
-    );
-    buffer.writeln();
-
-    for (final tierData in tiersData) {
-      final tier = tierData.tier;
-      final emoji = tier.emoji.isNotEmpty ? '${tier.emoji} ' : '';
-      buffer.writeln('## $emoji${tier.name}');
-      buffer.writeln();
-
-      if (tierData.entries.isEmpty) {
-        buffer.writeln('*No entries*');
-        buffer.writeln();
-        continue;
-      }
+    for (var i = 0; i < nonEmptyTiers.length; i++) {
+      final tierData = nonEmptyTiers[i];
+      buffer.writeln(tierData.tier.name);
 
       for (final entryData in tierData.entries) {
-        final s = entryData.subject;
-        final title = (s?.nameCn.isNotEmpty == true)
-            ? s!.nameCn
-            : (s?.nameJp ?? 'Unknown');
-        final year = (s?.airDate.length ?? 0) >= 4
-            ? ' (${s!.airDate.substring(0, 4)})'
-            : '';
-        final ratingStr = (s?.rating ?? 0) > 0 ? ' — ${s!.rating}/10' : '';
-
-        buffer.writeln('- **$title**$year$ratingStr');
-
-        if (entryData.entry.note.isNotEmpty) {
-          buffer.writeln('  > ${entryData.entry.note}');
-        }
+        buffer.writeln(_plainTextTitle(entryData.subject));
       }
-      buffer.writeln();
+
+      if (i < nonEmptyTiers.length - 1) {
+        buffer.writeln();
+      }
     }
 
     return buffer.toString();
   }
 
-  /// Exports Markdown to a file and shares it.
-  Future<void> exportMarkdownFile() async {
-    final md = await exportMarkdown();
+  /// Exports plain text to a file and shares it.
+  Future<void> exportPlainTextFile({String? content}) async {
+    final text = content ?? await exportPlainText();
     final dir = await getTemporaryDirectory();
-    final file = File('${dir.path}/animeshelf_export.md');
-    await file.writeAsString(md);
+    final file = File('${dir.path}/animeshelf_export.txt');
+    await file.writeAsString(text);
     await Share.shareXFiles([XFile(file.path)]);
   }
 
@@ -862,6 +850,22 @@ class ExportService {
       return '"${value.replaceAll('"', '""')}"';
     }
     return value;
+  }
+
+  String _plainTextTitle(Subject? subject) {
+    if (subject == null) {
+      return 'Unknown';
+    }
+
+    if (subject.nameCn.isNotEmpty) {
+      return subject.nameCn;
+    }
+
+    if (subject.nameJp.isNotEmpty) {
+      return subject.nameJp;
+    }
+
+    return 'Unknown';
   }
 
   String _normalizeTierHeaderCandidate(String line) {

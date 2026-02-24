@@ -10,7 +10,7 @@ import 'package:dio/dio.dart';
 class BangumiClient {
   static const _baseUrl = 'https://api.bgm.tv';
   static const _userAgent =
-      'AnimeShelf/1.0 (https://github.com/wenmou/animeshelf)';
+      'AnimeShelf/1.0 (https://github.com/mengdehong/AnimeShelf)';
   static const _maxRetries = 3;
 
   late final Dio _dio;
