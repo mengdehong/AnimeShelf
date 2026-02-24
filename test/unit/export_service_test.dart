@@ -277,6 +277,137 @@ void main() {
       final tiers = await db.select(db.tiers).get();
       expect(tiers, isEmpty);
     });
+
+    test('import preserves sparse ids and junction relations', () async {
+      final data = jsonEncode({
+        'version': 1,
+        'exportedAt': DateTime.now().toIso8601String(),
+        'tiers': [
+          {
+            'id': 10,
+            'name': 'Inbox',
+            'emoji': '',
+            'colorValue': 0xFF9E9E9E,
+            'tierSort': 8000.0,
+            'isInbox': true,
+          },
+          {
+            'id': 20,
+            'name': 'S',
+            'emoji': '',
+            'colorValue': 0xFFFF6B6B,
+            'tierSort': 3000.0,
+            'isInbox': false,
+          },
+        ],
+        'subjects': [
+          {'subjectId': 500, 'nameCn': 'Clannad'},
+          {'subjectId': 600, 'nameCn': 'Clannad After Story'},
+        ],
+        'entries': [
+          {
+            'id': 101,
+            'tierId': 20,
+            'primarySubjectId': 500,
+            'entryRank': 1000.0,
+            'note': 'favorite',
+          },
+        ],
+        'entrySubjects': [
+          {'entryId': 101, 'subjectId': 500},
+          {'entryId': 101, 'subjectId': 600},
+        ],
+      });
+
+      await exportService.importJson(data);
+
+      final tiers = await db.select(db.tiers).get();
+      final entries = await db.select(db.entries).get();
+      final relations = await db.select(db.entrySubjects).get();
+
+      expect(tiers.map((tier) => tier.id), containsAll([10, 20]));
+      expect(entries.single.id, equals(101));
+      expect(entries.single.tierId, equals(20));
+      expect(
+        relations
+            .where((relation) => relation.entryId == 101)
+            .map((relation) => relation.subjectId)
+            .toSet(),
+        equals({500, 600}),
+      );
+    });
+
+    test('import rejects broken foreign-key references', () async {
+      final invalidTierRef = jsonEncode({
+        'version': 1,
+        'exportedAt': DateTime.now().toIso8601String(),
+        'tiers': [
+          {
+            'id': 1,
+            'name': 'Inbox',
+            'emoji': '',
+            'colorValue': 0xFF9E9E9E,
+            'tierSort': 8000.0,
+            'isInbox': true,
+          },
+        ],
+        'subjects': [
+          {'subjectId': 42, 'nameCn': 'Steins;Gate'},
+        ],
+        'entries': [
+          {
+            'id': 9,
+            'tierId': 999,
+            'primarySubjectId': 42,
+            'entryRank': 1000.0,
+            'note': '',
+          },
+        ],
+        'entrySubjects': [
+          {'entryId': 9, 'subjectId': 42},
+        ],
+      });
+
+      await expectLater(
+        exportService.importJson(invalidTierRef),
+        throwsA(isA<FormatException>()),
+      );
+
+      final invalidEntryRef = jsonEncode({
+        'version': 1,
+        'exportedAt': DateTime.now().toIso8601String(),
+        'tiers': [
+          {
+            'id': 1,
+            'name': 'Inbox',
+            'emoji': '',
+            'colorValue': 0xFF9E9E9E,
+            'tierSort': 8000.0,
+            'isInbox': true,
+          },
+        ],
+        'subjects': [
+          {'subjectId': 42, 'nameCn': 'Steins;Gate'},
+        ],
+        'entries': [
+          {
+            'id': 9,
+            'tierId': 1,
+            'primarySubjectId': 42,
+            'entryRank': 1000.0,
+            'note': '',
+          },
+        ],
+        'entrySubjects': [
+          {'entryId': 999, 'subjectId': 42},
+        ],
+      });
+
+      await expectLater(
+        exportService.importJson(invalidEntryRef),
+        throwsA(isA<FormatException>()),
+      );
+    });
   });
 
   group('importPlainText', () {
@@ -611,6 +742,52 @@ void main() {
       expect(entries.length, equals(1));
       expect(report.importedCount, equals(1));
       expect(report.duplicateSkipped, equals(1));
+    });
+
+    test('ignores corrupted hidden relations in duplicate check', () async {
+      await db
+          .into(db.subjects)
+          .insert(
+            SubjectsCompanion.insert(
+              subjectId: const Value(777),
+              nameCn: const Value('孤儿番剧'),
+            ),
+          );
+
+      await db.customStatement('PRAGMA foreign_keys = OFF;');
+      await db.customStatement(
+        'INSERT INTO entries '
+        '(id, tier_id, primary_subject_id, entry_rank, note) '
+        "VALUES (900, 999, 777, 1000.0, '');",
+      );
+      await db.customStatement(
+        'INSERT INTO entry_subjects (entry_id, subject_id) VALUES (900, 777);',
+      );
+      await db.customStatement('PRAGMA foreign_keys = ON;');
+
+      searchFixtures['孤儿番剧'] = [
+        {
+          'id': 777,
+          'name': '孤儿番剧',
+          'name_cn': '孤儿番剧',
+          'summary': '',
+          'air_date': '2020-01-01',
+          'eps': 12,
+          'rating': {'score': 8.1, 'total': 3000},
+        },
+      ];
+
+      final report = await exportService.importPlainText('孤儿番剧\n');
+
+      final entries = await db.select(db.entries).get();
+      final entrySubjects = await db.select(db.entrySubjects).get();
+
+      expect(report.importedCount, equals(1));
+      expect(report.duplicateSkipped, equals(0));
+      expect(entries.any((entry) => entry.id == 900), isFalse);
+      expect(entrySubjects.any((row) => row.entryId == 900), isFalse);
+      expect(entries.length, equals(1));
+      expect(entrySubjects.length, equals(1));
     });
 
     test('continues importing when one search request fails', () async {
