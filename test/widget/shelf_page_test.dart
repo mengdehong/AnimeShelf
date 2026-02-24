@@ -170,8 +170,7 @@ void main() {
       // Allow stream to emit
       await tester.pumpAndSettle();
 
-      // Seed tiers should include the new top ranks.
-      expect(find.text('Inbox'), findsOneWidget);
+      // Top tiers should be visible immediately.
       expect(find.text('SSS'), findsOneWidget);
       expect(find.text('SS'), findsOneWidget);
       expect(find.text('S'), findsOneWidget);
@@ -193,12 +192,15 @@ void main() {
       await db.close();
     });
 
-    testWidgets('has search and settings action buttons', (tester) async {
+    testWidgets('has tier reorder, add, and settings action buttons', (
+      tester,
+    ) async {
       final db = _createTestDb();
 
       await tester.pumpWidget(_testApp(child: const ShelfPage(), db: db));
       await tester.pumpAndSettle();
 
+      expect(find.byIcon(Icons.reorder), findsOneWidget);
       expect(find.byIcon(Icons.add), findsOneWidget);
       expect(find.byIcon(Icons.settings), findsOneWidget);
 
@@ -235,13 +237,37 @@ void main() {
       await db.close();
     });
 
+    testWidgets('tier reorder button opens manage order bottom sheet', (
+      tester,
+    ) async {
+      final db = _createTestDb();
+
+      await tester.pumpWidget(_testApp(child: const ShelfPage(), db: db));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.reorder));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Manage Tier Order'), findsOneWidget);
+      expect(find.text('Save Order'), findsOneWidget);
+
+      await db.close();
+    });
+
     testWidgets('empty tier shows placeholder text', (tester) async {
       final db = _createTestDb();
 
       await tester.pumpWidget(_testApp(child: const ShelfPage(), db: db));
       await tester.pumpAndSettle();
 
-      // Inbox shows special message, other tiers show empty text
+      await tester.scrollUntilVisible(
+        find.text('Inbox'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+
+      // Inbox shows special message, other tiers show empty text.
       expect(find.text('搜索并添加动画即可开始'), findsOneWidget);
       expect(find.text(''), findsAtLeastNWidgets(3));
 
@@ -252,6 +278,13 @@ void main() {
       final db = _createTestDb();
 
       await tester.pumpWidget(_testApp(child: const ShelfPage(), db: db));
+      await tester.pumpAndSettle();
+
+      await tester.scrollUntilVisible(
+        find.text('Inbox'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.pumpAndSettle();
 
       // Double tap on a tier name (e.g. Inbox)

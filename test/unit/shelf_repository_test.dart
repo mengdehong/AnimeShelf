@@ -82,6 +82,29 @@ void main() {
       expect(updated.tierSort, equals(500.0));
     });
 
+    test('setTierOrder applies provided order with fresh spacing', () async {
+      final tiers = await (db.select(
+        db.tiers,
+      )..orderBy([(t) => OrderingTerm.asc(t.tierSort)])).get();
+      final inbox = tiers.firstWhere((tier) => tier.isInbox);
+
+      final ordered =
+          tiers.where((tier) => !tier.isInbox).toList(growable: true)
+            ..insert(0, inbox);
+      await repo.setTierOrder(
+        ordered.map((tier) => tier.id).toList(growable: false),
+      );
+
+      final reordered = await (db.select(
+        db.tiers,
+      )..orderBy([(t) => OrderingTerm.asc(t.tierSort)])).get();
+
+      expect(reordered.first.id, equals(inbox.id));
+      expect(reordered.first.tierSort, equals(1000.0));
+      expect(reordered[1].tierSort, equals(2000.0));
+      expect(reordered.last.tierSort, equals(8000.0));
+    });
+
     test('recompressTierSorts evenly spaces tiers', () async {
       // Mess up tier sorts to be very close
       final tiers = await db.select(db.tiers).get();

@@ -139,7 +139,43 @@ class ShelfRepository {
     }
   }
 
-  /// Re-compresses all entry ranks within a tier to evenly-spaced values.
+  /// Sets tier order using the provided ordered list of tier IDs.
+  Future<void> setTierOrder(List<int> orderedTierIds) async {
+    if (orderedTierIds.isEmpty) {
+      return;
+    }
+    try {
+      await _db.transaction(() async {
+        final allTiers = await _db.select(_db.tiers).get();
+        final existingIds = allTiers.map((tier) => tier.id).toSet();
+        final newIds = orderedTierIds.toSet();
+        if (orderedTierIds.length != newIds.length ||
+            existingIds.length != orderedTierIds.length ||
+            !newIds.containsAll(existingIds)) {
+          throw const DatabaseException(
+            message: 'Tier order does not match current tiers',
+          );
+        }
+        final newSorts = RankUtils.recompressRanks(orderedTierIds.length);
+        await _db.batch((batch) {
+          for (var i = 0; i < orderedTierIds.length; i++) {
+            batch.update(
+              _db.tiers,
+              TiersCompanion(tierSort: Value(newSorts[i])),
+              where: (tbl) => tbl.id.equals(orderedTierIds[i]),
+            );
+          }
+        });
+      });
+    } catch (e) {
+      if (e is DatabaseException) rethrow;
+      throw DatabaseException(
+        message: 'Failed to set tier order',
+        originalError: e,
+      );
+    }
+  }
+
   Future<void> recompressEntryRanks(int tierId) async {
     try {
       await _db.transaction(() async {

@@ -1,7 +1,5 @@
-import 'package:anime_shelf/core/theme/app_theme.dart';
 import 'package:anime_shelf/core/utils/export_service.dart';
 import 'package:anime_shelf/core/utils/plain_text_import_report_formatter.dart';
-import 'package:anime_shelf/core/utils/rank_utils.dart';
 import 'package:anime_shelf/core/window/fused_app_bar.dart';
 import 'package:anime_shelf/features/settings/providers/settings_provider.dart';
 import 'package:anime_shelf/features/shelf/data/shelf_repository.dart';
@@ -14,7 +12,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 /// Main shelf page — displays all tiers with their entries.
 ///
-/// Supports drag-and-drop reordering of both tiers and entries.
+/// Supports drag-and-drop for entries.
+/// Tier ordering is managed from a dedicated bottom sheet.
 class ShelfPage extends HookConsumerWidget {
   const ShelfPage({super.key});
 
@@ -28,6 +27,7 @@ class ShelfPage extends HookConsumerWidget {
     final tiersAsync = ref.watch(shelfTiersProvider);
     final importTaskState = ref.watch(plainTextImportTaskProvider);
     final l10n = AppLocalizations.of(context)!;
+    final loadedTiers = tiersAsync.valueOrNull;
 
     return Scaffold(
       appBar: FusedAppBar(
@@ -35,6 +35,13 @@ class ShelfPage extends HookConsumerWidget {
         titleSpacing: 12,
         title: _SearchBar(onTap: () => context.push('/search')),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.reorder),
+            tooltip: 'Manage Tier Order',
+            onPressed: loadedTiers == null || loadedTiers.length < 2
+                ? null
+                : () => _showManageTierOrderSheet(context, ref, loadedTiers),
+          ),
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () => _showAddTierDialog(context, ref),
@@ -211,59 +218,166 @@ class ShelfPage extends HookConsumerWidget {
       emojiController.dispose();
     }
   }
+
+  Future<void> _showManageTierOrderSheet(
+    BuildContext context,
+    WidgetRef ref,
+    List<TierWithEntries> tiers,
+  ) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return _ManageTierOrderSheet(
+          tiers: tiers,
+          onSave: (orderedTierIds) {
+            return ref
+                .read(shelfRepositoryProvider)
+                .setTierOrder(orderedTierIds);
+          },
+        );
+      },
+    );
+  }
 }
 
 /// Inner scrollable content showing all tier sections.
-class _ShelfContent extends HookConsumerWidget {
+class _ShelfContent extends StatelessWidget {
   final List<TierWithEntries> tiers;
   final double bottomPadding;
 
   const _ShelfContent({required this.tiers, required this.bottomPadding});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
     if (tiers.isEmpty) {
       return Center(child: Text(l10n.noTiersYet));
     }
 
-    final metrics = Theme.of(context).extension<AppThemeMetrics>();
-    final sectionRadius = metrics?.sectionRadius ?? 16;
-
-    return ReorderableListView(
+    return ListView.builder(
       padding: EdgeInsets.only(bottom: bottomPadding),
-      buildDefaultDragHandles: false,
       cacheExtent: 600,
-      onReorder: (oldIndex, newIndex) =>
-          _onReorderTier(ref, oldIndex, newIndex),
-      proxyDecorator: (child, index, animation) {
-        return AnimatedBuilder(
-          animation: animation,
-          builder: (context, child) => Material(
-            elevation: 4,
-            borderRadius: BorderRadius.circular(sectionRadius),
-            child: child,
-          ),
-          child: child,
-        );
-      },
-      children: tiers.asMap().entries.map((entry) {
-        final index = entry.key;
-        final tierData = entry.value;
+      itemCount: tiers.length,
+      itemBuilder: (context, index) {
+        final tierData = tiers[index];
         return RepaintBoundary(
           key: ValueKey(tierData.tier.id),
-          child: TierSection(
-            index: index,
-            tier: tierData.tier,
-            entries: tierData.entries,
-          ),
+          child: TierSection(tier: tierData.tier, entries: tierData.entries),
         );
-      }).toList(),
+      },
+    );
+  }
+}
+
+class _ManageTierOrderSheet extends StatefulWidget {
+  final List<TierWithEntries> tiers;
+  final Future<void> Function(List<int> orderedTierIds) onSave;
+
+  const _ManageTierOrderSheet({required this.tiers, required this.onSave});
+
+  @override
+  State<_ManageTierOrderSheet> createState() => _ManageTierOrderSheetState();
+}
+
+class _ManageTierOrderSheetState extends State<_ManageTierOrderSheet> {
+  late final List<TierWithEntries> _orderedTiers;
+  var _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _orderedTiers = widget.tiers.toList(growable: true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+        child: SizedBox(
+          height: MediaQuery.sizeOf(context).height * 0.72,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Manage Tier Order',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Drag tiers to reorder them. This only changes section order.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: ReorderableListView.builder(
+                  itemCount: _orderedTiers.length,
+                  buildDefaultDragHandles: false,
+                  onReorder: _onReorder,
+                  itemBuilder: (context, index) {
+                    final tier = _orderedTiers[index].tier;
+                    return ListTile(
+                      key: ValueKey(tier.id),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      leading: Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: Color(tier.colorValue),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      title: Text(
+                        tier.emoji.isEmpty
+                            ? tier.name
+                            : '${tier.emoji} ${tier.name}',
+                      ),
+                      subtitle: tier.isInbox
+                          ? const Text('Inbox tier')
+                          : const Text('Custom tier'),
+                      trailing: ReorderableDragStartListener(
+                        index: index,
+                        child: const Icon(Icons.drag_indicator),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: _isSaving
+                        ? null
+                        : () => Navigator.of(context).pop(),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: _isSaving ? null : _save,
+                    child: _isSaving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Save Order'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
-  void _onReorderTier(WidgetRef ref, int oldIndex, int newIndex) {
+  void _onReorder(int oldIndex, int newIndex) {
     if (oldIndex < newIndex) {
       newIndex -= 1;
     }
@@ -271,29 +385,40 @@ class _ShelfContent extends HookConsumerWidget {
       return;
     }
 
-    final tier = tiers[oldIndex].tier;
+    setState(() {
+      final moved = _orderedTiers.removeAt(oldIndex);
+      _orderedTiers.insert(newIndex, moved);
+    });
+  }
 
-    // Calculate the actual prev/next based on movement direction
-    final double? actualPrev;
-    final double? actualNext;
-    if (oldIndex < newIndex) {
-      actualPrev = tiers[newIndex].tier.tierSort;
-      actualNext = newIndex + 1 < tiers.length
-          ? tiers[newIndex + 1].tier.tierSort
-          : null;
-    } else {
-      actualPrev = newIndex > 0 ? tiers[newIndex - 1].tier.tierSort : null;
-      actualNext = tiers[newIndex].tier.tierSort;
-    }
+  Future<void> _save() async {
+    setState(() {
+      _isSaving = true;
+    });
 
-    final newSort = RankUtils.insertRank(actualPrev, actualNext);
-    final repo = ref.read(shelfRepositoryProvider);
-    repo.reorderTier(tierId: tier.id, newSort: newSort);
-
-    if (actualPrev != null &&
-        actualNext != null &&
-        RankUtils.needsRecompression(actualPrev, actualNext)) {
-      repo.recompressTierSorts();
+    try {
+      await widget.onSave(
+        _orderedTiers
+            .map((tierData) => tierData.tier.id)
+            .toList(growable: false),
+      );
+      if (!mounted) {
+        return;
+      }
+      Navigator.of(context).pop();
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to save tier order')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
     }
   }
 }

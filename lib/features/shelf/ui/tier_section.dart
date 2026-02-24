@@ -16,16 +16,10 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 class TierSection extends HookConsumerWidget {
   static const _entrySpacing = 10.0;
 
-  final int index;
   final Tier tier;
   final List<EntryWithSubject> entries;
 
-  const TierSection({
-    super.key,
-    required this.index,
-    required this.tier,
-    required this.entries,
-  });
+  const TierSection({super.key, required this.tier, required this.entries});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -103,7 +97,6 @@ class TierSection extends HookConsumerWidget {
                       ),
                     ),
                     child: _TierHeader(
-                      index: index,
                       tier: tier,
                       tierColor: tierColor,
                       onEdit: () => _showEditDialog(context, ref),
@@ -342,13 +335,11 @@ class TierSection extends HookConsumerWidget {
 
 /// Tier header row with name, emoji, color chip, and action buttons.
 class _TierHeader extends StatelessWidget {
-  final int index;
   final Tier tier;
   final Color tierColor;
   final VoidCallback onEdit;
 
   const _TierHeader({
-    required this.index,
     required this.tier,
     required this.tierColor,
     required this.onEdit,
@@ -361,35 +352,33 @@ class _TierHeader extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: ReorderableDragStartListener(
-              index: index,
-              child: GestureDetector(
-                onDoubleTap: onEdit,
-                behavior: HitTestBehavior.opaque,
-                child: Row(
-                  children: [
-                    Container(
-                      width: 14,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        color: tierColor,
-                        shape: BoxShape.circle,
-                      ),
+            child: GestureDetector(
+              onDoubleTap: onEdit,
+              behavior: HitTestBehavior.opaque,
+              child: Row(
+                children: [
+                  Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: tierColor,
+                      shape: BoxShape.circle,
                     ),
-                    const SizedBox(width: 8),
-                    if (tier.emoji.isNotEmpty) ...[
-                      Text(tier.emoji, style: const TextStyle(fontSize: 18)),
-                      const SizedBox(width: 6),
-                    ],
-                    Expanded(
-                      child: Text(
-                        tier.name,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w600),
-                      ),
-                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  if (tier.emoji.isNotEmpty) ...[
+                    Text(tier.emoji, style: const TextStyle(fontSize: 18)),
+                    const SizedBox(width: 6),
                   ],
-                ),
+                  Expanded(
+                    child: Text(
+                      tier.name,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
