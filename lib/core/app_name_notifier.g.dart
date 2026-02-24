@@ -6,11 +6,11 @@ part of 'app_name_notifier.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$appNameNotifierHash() => r'8f387ddd4f806794f2c9ed8ed9ef89582823e7b3';
+String _$appNameNotifierHash() => r'e6ba423e35aecbe78cb10e59a8f787d91c9512e0';
 
 /// Manages the user-facing display name of the application.
 ///
-/// Persisted via [SharedPreferences].  Defaults to `'AnimeShelf'`.
+/// Persisted via [SharedPreferences].  Defaults to `'动漫书架'`.
 /// The name is shown in the [FusedAppBar] leading area on desktop and
 /// can be edited from the Settings → Window section.
 ///
