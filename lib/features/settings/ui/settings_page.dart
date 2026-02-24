@@ -522,21 +522,17 @@ class SettingsPage extends HookConsumerWidget {
         return;
       }
 
-      if (context.mounted) {
-        final started = ref
-            .read(plainTextImportTaskProvider.notifier)
-            .startImport(content);
+      final started = ref
+          .read(plainTextImportTaskProvider.notifier)
+          .startImport(content);
 
-        if (!started) {
+      if (!started) {
+        if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(l10n.plainTextImportAlreadyRunning)),
           );
-          return;
         }
-
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l10n.importStartedInBackground)));
+        return;
       }
     } catch (e) {
       if (context.mounted) {
