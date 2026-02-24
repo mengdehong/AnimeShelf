@@ -238,6 +238,25 @@ void main() {
       await db.close();
     });
 
+    testWidgets('manage sheet dismisses when tapping outside', (tester) async {
+      final db = _createTestDb();
+
+      await tester.pumpWidget(_testApp(child: const ShelfPage(), db: db));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.reorder));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Manage Tiers'), findsOneWidget);
+
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Manage Tiers'), findsNothing);
+
+      await db.close();
+    });
+
     testWidgets('manage sheet can stage a new tier before save', (
       tester,
     ) async {

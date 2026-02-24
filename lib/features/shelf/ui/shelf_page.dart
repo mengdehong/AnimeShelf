@@ -127,7 +127,7 @@ class ShelfPage extends HookConsumerWidget {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      isDismissible: false,
+      isDismissible: true,
       enableDrag: false,
       builder: (context) {
         return _ManageTierOrderSheet(tiers: tiers, repository: repository);
