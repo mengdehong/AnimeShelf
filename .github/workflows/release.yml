@@ -55,6 +55,30 @@ jobs:
       - name: Build Android APK
         run: flutter build apk --release
 
+      - name: Verify Android INTERNET permission
+        run: |
+          SDK_ROOT="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          if [ -z "$SDK_ROOT" ]; then
+            echo "ANDROID_HOME and ANDROID_SDK_ROOT are both unset"
+            exit 1
+          fi
+
+          BUILD_TOOLS_DIR="$SDK_ROOT/build-tools"
+          BUILD_TOOLS_VERSION="$(ls -1 "$BUILD_TOOLS_DIR" | sort -V | tail -n1)"
+          AAPT="$BUILD_TOOLS_DIR/$BUILD_TOOLS_VERSION/aapt"
+
+          if [ ! -x "$AAPT" ]; then
+            echo "aapt not found at $AAPT"
+            exit 1
+          fi
+
+          "$AAPT" dump permissions build/app/outputs/flutter-apk/app-release.apk
+
+          if ! "$AAPT" dump permissions build/app/outputs/flutter-apk/app-release.apk | grep -q "android.permission.INTERNET"; then
+            echo "Missing android.permission.INTERNET in release APK"
+            exit 1
+          fi
+
       - name: Archive Android artifact
         run: |
           mkdir -p dist
@@ -77,7 +101,8 @@ jobs:
       - name: Install Linux build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build libgtk-3-dev liblzma-dev
+          sudo apt-get install -y --no-install-recommends \
+            cmake g++ ninja-build libgtk-3-dev liblzma-dev
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -89,6 +114,9 @@ jobs:
         run: flutter pub get
 
       - name: Build Linux bundle
+        env:
+          CC: gcc
+          CXX: g++
         run: flutter build linux --release
 
       - name: Archive Linux artifact
@@ -129,7 +157,7 @@ jobs:
         shell: cmd
         run: |
           if not exist dist mkdir dist
-          makensis /DVERSION=%GITHUB_REF_NAME% /DOUTPUT_FILE=dist\AnimeShelf-%GITHUB_REF_NAME%-windows-x64-setup.exe windows\installer\installer.nsi
+          "C:\Program Files (x86)\NSIS\makensis.exe" /DVERSION=%GITHUB_REF_NAME% windows\installer\installer.nsi
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4

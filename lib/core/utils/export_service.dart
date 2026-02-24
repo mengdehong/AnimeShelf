@@ -217,7 +217,7 @@ class ExportService {
   Future<String> exportCsv() async {
     final tiersData = await _shelfRepo.watchTiersWithEntries().first;
     final buffer = StringBuffer();
-    buffer.writeln('Tier,Title,Original Title,Air Date,Rating,Note');
+    buffer.writeln('分组,标题,原名,放送日期,评分,备注');
 
     for (final tierData in tiersData) {
       for (final entryData in tierData.entries) {
@@ -292,7 +292,13 @@ class ExportService {
 
   /// Imports data from a JSON string (full replace).
   Future<void> importJson(String jsonString) async {
-    final data = jsonDecode(jsonString) as Map<String, dynamic>;
+    final decoded = jsonDecode(jsonString);
+    if (decoded is! Map) {
+      throw const FormatException('Backup JSON root must be an object.');
+    }
+
+    final data = Map<String, dynamic>.from(decoded);
+    final payload = _parseJsonImportPayload(data);
 
     await _db.transaction(() async {
       // Clear existing data
@@ -302,80 +308,359 @@ class ExportService {
       await _db.delete(_db.tiers).go();
 
       // Import tiers
-      final tiers = data['tiers'] as List<dynamic>;
-      for (final t in tiers) {
-        final map = t as Map<String, dynamic>;
+      for (final tier in payload.tiers) {
+        final createdAt = tier.createdAt;
         await _db
             .into(_db.tiers)
             .insert(
               TiersCompanion.insert(
-                name: map['name'] as String,
-                emoji: Value(map['emoji'] as String? ?? ''),
-                colorValue: map['colorValue'] as int,
-                tierSort: (map['tierSort'] as num).toDouble(),
-                isInbox: Value(map['isInbox'] as bool? ?? false),
+                id: Value(tier.id),
+                name: tier.name,
+                emoji: Value(tier.emoji),
+                colorValue: tier.colorValue,
+                tierSort: tier.tierSort,
+                isInbox: Value(tier.isInbox),
+                createdAt: createdAt != null
+                    ? Value(createdAt)
+                    : const Value.absent(),
               ),
             );
       }
 
       // Import subjects
-      final subjects = data['subjects'] as List<dynamic>;
-      for (final s in subjects) {
-        final map = s as Map<String, dynamic>;
+      for (final subject in payload.subjects) {
+        final lastFetchedAt = subject.lastFetchedAt;
         await _db
             .into(_db.subjects)
             .insert(
               SubjectsCompanion.insert(
-                subjectId: Value(map['subjectId'] as int),
-                nameCn: Value(map['nameCn'] as String? ?? ''),
-                nameJp: Value(map['nameJp'] as String? ?? ''),
-                posterUrl: Value(map['posterUrl'] as String? ?? ''),
-                largePosterUrl: Value(map['largePosterUrl'] as String? ?? ''),
+                subjectId: Value(subject.subjectId),
+                nameCn: Value(subject.nameCn),
+                nameJp: Value(subject.nameJp),
+                posterUrl: Value(subject.posterUrl),
+                largePosterUrl: Value(subject.largePosterUrl),
                 // Local paths are device-specific; clear on import.
                 localThumbnailPath: const Value(''),
                 localLargeImagePath: const Value(''),
-                airDate: Value(map['airDate'] as String? ?? ''),
-                eps: Value(map['eps'] as int? ?? 0),
-                rating: Value((map['rating'] as num?)?.toDouble() ?? 0.0),
-                summary: Value(map['summary'] as String? ?? ''),
-                tags: Value(map['tags'] as String? ?? ''),
-                director: Value(map['director'] as String? ?? ''),
-                studio: Value(map['studio'] as String? ?? ''),
-                globalRank: Value(map['globalRank'] as int? ?? 0),
+                airDate: Value(subject.airDate),
+                eps: Value(subject.eps),
+                rating: Value(subject.rating),
+                summary: Value(subject.summary),
+                tags: Value(subject.tags),
+                director: Value(subject.director),
+                studio: Value(subject.studio),
+                globalRank: Value(subject.globalRank),
+                lastFetchedAt: lastFetchedAt != null
+                    ? Value(lastFetchedAt)
+                    : const Value.absent(),
               ),
             );
       }
 
       // Import entries
-      final entries = data['entries'] as List<dynamic>;
-      for (final e in entries) {
-        final map = e as Map<String, dynamic>;
+      for (final entry in payload.entries) {
+        final createdAt = entry.createdAt;
+        final updatedAt = entry.updatedAt;
         await _db
             .into(_db.entries)
             .insert(
               EntriesCompanion.insert(
-                tierId: map['tierId'] as int,
-                primarySubjectId: map['primarySubjectId'] as int,
-                entryRank: (map['entryRank'] as num).toDouble(),
-                note: Value(map['note'] as String? ?? ''),
+                id: Value(entry.id),
+                tierId: entry.tierId,
+                primarySubjectId: entry.primarySubjectId,
+                entryRank: entry.entryRank,
+                note: Value(entry.note),
+                createdAt: createdAt != null
+                    ? Value(createdAt)
+                    : const Value.absent(),
+                updatedAt: updatedAt != null
+                    ? Value(updatedAt)
+                    : const Value.absent(),
               ),
             );
       }
 
       // Import entry_subjects
-      final es = data['entrySubjects'] as List<dynamic>;
-      for (final item in es) {
-        final map = item as Map<String, dynamic>;
+      for (final relation in payload.entrySubjects) {
         await _db
             .into(_db.entrySubjects)
             .insert(
               EntrySubjectsCompanion.insert(
-                entryId: map['entryId'] as int,
-                subjectId: map['subjectId'] as int,
+                entryId: relation.entryId,
+                subjectId: relation.subjectId,
               ),
             );
       }
     });
+  }
+
+  _JsonImportPayload _parseJsonImportPayload(Map<String, dynamic> data) {
+    final version = _parseVersion(data['version']);
+    if (version < 1 || version > 2) {
+      throw FormatException('Unsupported backup version: $version');
+    }
+
+    final tiersRaw = _requireList(data, 'tiers');
+    final subjectsRaw = _requireList(data, 'subjects');
+    final entriesRaw = _requireList(data, 'entries');
+    final entrySubjectsRaw = _requireList(data, 'entrySubjects');
+
+    final tiers = <_JsonImportTier>[];
+    final tierIds = <int>{};
+    for (var i = 0; i < tiersRaw.length; i++) {
+      final row = _requireMap(tiersRaw[i], 'tiers[$i]');
+      final id = _requireInt(row, 'id', 'tiers[$i]');
+      if (!tierIds.add(id)) {
+        throw FormatException('Duplicate tier id: $id');
+      }
+
+      tiers.add(
+        _JsonImportTier(
+          id: id,
+          name: _requireString(row, 'name', 'tiers[$i]'),
+          emoji: _optionalString(row, 'emoji'),
+          colorValue: _requireInt(row, 'colorValue', 'tiers[$i]'),
+          tierSort: _requireDouble(row, 'tierSort', 'tiers[$i]'),
+          isInbox: _optionalBool(row, 'isInbox'),
+          createdAt: _optionalDateTime(row, 'createdAt'),
+        ),
+      );
+    }
+
+    if (tiers.isNotEmpty) {
+      final inboxCount = tiers.where((tier) => tier.isInbox).length;
+      if (inboxCount != 1) {
+        throw FormatException(
+          'Invalid tier data: expected exactly one Inbox tier, '
+          'found $inboxCount.',
+        );
+      }
+    }
+
+    final subjects = <_JsonImportSubject>[];
+    final subjectIds = <int>{};
+    for (var i = 0; i < subjectsRaw.length; i++) {
+      final row = _requireMap(subjectsRaw[i], 'subjects[$i]');
+      final subjectId = _requireInt(row, 'subjectId', 'subjects[$i]');
+      if (!subjectIds.add(subjectId)) {
+        throw FormatException('Duplicate subject id: $subjectId');
+      }
+
+      subjects.add(
+        _JsonImportSubject(
+          subjectId: subjectId,
+          nameCn: _optionalString(row, 'nameCn'),
+          nameJp: _optionalString(row, 'nameJp'),
+          posterUrl: _optionalString(row, 'posterUrl'),
+          largePosterUrl: _optionalString(row, 'largePosterUrl'),
+          airDate: _optionalString(row, 'airDate'),
+          eps: _optionalInt(row, 'eps', defaultValue: 0),
+          rating: _optionalDouble(row, 'rating', defaultValue: 0.0),
+          summary: _optionalString(row, 'summary'),
+          tags: _optionalString(row, 'tags'),
+          director: _optionalString(row, 'director'),
+          studio: _optionalString(row, 'studio'),
+          globalRank: _optionalInt(row, 'globalRank', defaultValue: 0),
+          lastFetchedAt: _optionalDateTime(row, 'lastFetchedAt'),
+        ),
+      );
+    }
+
+    final entries = <_JsonImportEntry>[];
+    final entryIds = <int>{};
+    for (var i = 0; i < entriesRaw.length; i++) {
+      final row = _requireMap(entriesRaw[i], 'entries[$i]');
+      final id = _requireInt(row, 'id', 'entries[$i]');
+      if (!entryIds.add(id)) {
+        throw FormatException('Duplicate entry id: $id');
+      }
+
+      final tierId = _requireInt(row, 'tierId', 'entries[$i]');
+      if (!tierIds.contains(tierId)) {
+        throw FormatException(
+          'Invalid entries[$i].tierId=$tierId: tier does not exist.',
+        );
+      }
+
+      final primarySubjectId = _requireInt(
+        row,
+        'primarySubjectId',
+        'entries[$i]',
+      );
+      if (!subjectIds.contains(primarySubjectId)) {
+        throw FormatException(
+          'Invalid entries[$i].primarySubjectId=$primarySubjectId: '
+          'subject does not exist.',
+        );
+      }
+
+      entries.add(
+        _JsonImportEntry(
+          id: id,
+          tierId: tierId,
+          primarySubjectId: primarySubjectId,
+          entryRank: _requireDouble(row, 'entryRank', 'entries[$i]'),
+          note: _optionalString(row, 'note'),
+          createdAt: _optionalDateTime(row, 'createdAt'),
+          updatedAt: _optionalDateTime(row, 'updatedAt'),
+        ),
+      );
+    }
+
+    final entrySubjects = <_JsonImportEntrySubject>[];
+    final relationKeys = <String>{};
+    for (var i = 0; i < entrySubjectsRaw.length; i++) {
+      final row = _requireMap(entrySubjectsRaw[i], 'entrySubjects[$i]');
+      final entryId = _requireInt(row, 'entryId', 'entrySubjects[$i]');
+      if (!entryIds.contains(entryId)) {
+        throw FormatException(
+          'Invalid entrySubjects[$i].entryId=$entryId: entry does not exist.',
+        );
+      }
+
+      final subjectId = _requireInt(row, 'subjectId', 'entrySubjects[$i]');
+      if (!subjectIds.contains(subjectId)) {
+        throw FormatException(
+          'Invalid entrySubjects[$i].subjectId=$subjectId: '
+          'subject does not exist.',
+        );
+      }
+
+      final relationKey = '$entryId:$subjectId';
+      if (!relationKeys.add(relationKey)) {
+        throw FormatException(
+          'Duplicate entry-subject relation: '
+          'entryId=$entryId, subjectId=$subjectId',
+        );
+      }
+
+      entrySubjects.add(
+        _JsonImportEntrySubject(entryId: entryId, subjectId: subjectId),
+      );
+    }
+
+    return _JsonImportPayload(
+      tiers: tiers,
+      subjects: subjects,
+      entries: entries,
+      entrySubjects: entrySubjects,
+    );
+  }
+
+  int _parseVersion(Object? rawVersion) {
+    if (rawVersion == null) {
+      return 1;
+    }
+    if (rawVersion is num) {
+      return rawVersion.toInt();
+    }
+    throw const FormatException('Backup version must be numeric.');
+  }
+
+  List<dynamic> _requireList(Map<String, dynamic> map, String key) {
+    final value = map[key];
+    if (value is! List) {
+      throw FormatException('Missing or invalid "$key" list in backup.');
+    }
+    return value;
+  }
+
+  Map<String, dynamic> _requireMap(Object? value, String context) {
+    if (value is! Map) {
+      throw FormatException('Invalid $context: expected object.');
+    }
+    return Map<String, dynamic>.from(value);
+  }
+
+  int _requireInt(Map<String, dynamic> map, String key, String context) {
+    final value = map[key];
+    if (value is num) {
+      return value.toInt();
+    }
+    throw FormatException('Invalid $context.$key: expected integer.');
+  }
+
+  int _optionalInt(
+    Map<String, dynamic> map,
+    String key, {
+    required int defaultValue,
+  }) {
+    final value = map[key];
+    if (value == null) {
+      return defaultValue;
+    }
+    if (value is num) {
+      return value.toInt();
+    }
+    throw FormatException('Invalid $key: expected integer.');
+  }
+
+  double _requireDouble(Map<String, dynamic> map, String key, String context) {
+    final value = map[key];
+    if (value is num) {
+      return value.toDouble();
+    }
+    throw FormatException('Invalid $context.$key: expected number.');
+  }
+
+  double _optionalDouble(
+    Map<String, dynamic> map,
+    String key, {
+    required double defaultValue,
+  }) {
+    final value = map[key];
+    if (value == null) {
+      return defaultValue;
+    }
+    if (value is num) {
+      return value.toDouble();
+    }
+    throw FormatException('Invalid $key: expected number.');
+  }
+
+  String _requireString(Map<String, dynamic> map, String key, String context) {
+    final value = map[key];
+    if (value is String) {
+      return value;
+    }
+    throw FormatException('Invalid $context.$key: expected string.');
+  }
+
+  String _optionalString(Map<String, dynamic> map, String key) {
+    final value = map[key];
+    if (value == null) {
+      return '';
+    }
+    if (value is String) {
+      return value;
+    }
+    throw FormatException('Invalid $key: expected string.');
+  }
+
+  bool _optionalBool(Map<String, dynamic> map, String key) {
+    final value = map[key];
+    if (value == null) {
+      return false;
+    }
+    if (value is bool) {
+      return value;
+    }
+    throw FormatException('Invalid $key: expected boolean.');
+  }
+
+  DateTime? _optionalDateTime(Map<String, dynamic> map, String key) {
+    final value = map[key];
+    if (value == null) {
+      return null;
+    }
+    if (value is! String) {
+      throw FormatException('Invalid $key: expected ISO date string.');
+    }
+    final parsed = DateTime.tryParse(value);
+    if (parsed == null) {
+      throw FormatException('Invalid $key: malformed ISO date string.');
+    }
+    return parsed;
   }
 
   /// Imports entries from plain text where each non-empty line is one anime.
@@ -507,10 +792,9 @@ class ExportService {
     }
 
     if (importLines.isNotEmpty) {
-      final existingRows = await _db.select(_db.entrySubjects).get();
-      final existingSubjectIds = existingRows
-          .map((row) => row.subjectId)
-          .toSet();
+      await _sanitizeShelfRelationsForPlainTextImport();
+      final existingSubjectIds =
+          await _loadExistingSubjectIdsForDuplicateCheck();
 
       emitProgress(PlainTextImportStage.searching);
 
@@ -597,7 +881,7 @@ class ExportService {
             processedEntries += 1;
             processedLineNumbers.add(line.lineNumber);
 
-            final displayTitle = top1 != null ? _displayTitle(top1) : 'Unknown';
+            final displayTitle = top1 != null ? _displayTitle(top1) : '未知';
             final reason = resolution.reason ?? 'low confidence';
             lowConfidenceEntries.add(
               'L${line.lineNumber}: ${line.query} -> '
@@ -744,6 +1028,46 @@ class ExportService {
     );
   }
 
+  Future<void> _sanitizeShelfRelationsForPlainTextImport() async {
+    await _db.transaction(() async {
+      await _db.customStatement(
+        'DELETE FROM entry_subjects '
+        'WHERE entry_id NOT IN (SELECT id FROM entries) '
+        'OR subject_id NOT IN (SELECT subject_id FROM subjects) '
+        'OR entry_id IN ('
+        '  SELECT id FROM entries '
+        '  WHERE tier_id NOT IN (SELECT id FROM tiers) '
+        '  OR primary_subject_id NOT IN (SELECT subject_id FROM subjects)'
+        ');',
+      );
+
+      await _db.customStatement(
+        'DELETE FROM entries '
+        'WHERE tier_id NOT IN (SELECT id FROM tiers) '
+        'OR primary_subject_id NOT IN (SELECT subject_id FROM subjects);',
+      );
+
+      await _db.customStatement(
+        'DELETE FROM entry_subjects '
+        'WHERE entry_id NOT IN (SELECT id FROM entries);',
+      );
+    });
+  }
+
+  Future<Set<int>> _loadExistingSubjectIdsForDuplicateCheck() async {
+    final rows = await (_db.select(_db.entrySubjects).join([
+      innerJoin(
+        _db.entries,
+        _db.entries.id.equalsExp(_db.entrySubjects.entryId),
+      ),
+      innerJoin(_db.tiers, _db.tiers.id.equalsExp(_db.entries.tierId)),
+    ])).get();
+
+    return rows
+        .map((row) => row.readTable(_db.entrySubjects).subjectId)
+        .toSet();
+  }
+
   String _searchFailureReason(Object error) {
     if (error is NetworkTimeoutException) {
       return 'search request failed: timeout';
@@ -854,7 +1178,7 @@ class ExportService {
 
   String _plainTextTitle(Subject? subject) {
     if (subject == null) {
-      return 'Unknown';
+      return '未知';
     }
 
     if (subject.nameCn.isNotEmpty) {
@@ -865,7 +1189,7 @@ class ExportService {
       return subject.nameJp;
     }
 
-    return 'Unknown';
+    return '未知';
   }
 
   String _normalizeTierHeaderCandidate(String line) {
@@ -1219,8 +1543,106 @@ class ExportService {
     if (subject.name.isNotEmpty) {
       return subject.name;
     }
-    return 'Unknown';
+    return '未知';
   }
+}
+
+class _JsonImportPayload {
+  final List<_JsonImportTier> tiers;
+  final List<_JsonImportSubject> subjects;
+  final List<_JsonImportEntry> entries;
+  final List<_JsonImportEntrySubject> entrySubjects;
+
+  const _JsonImportPayload({
+    required this.tiers,
+    required this.subjects,
+    required this.entries,
+    required this.entrySubjects,
+  });
+}
+
+class _JsonImportTier {
+  final int id;
+  final String name;
+  final String emoji;
+  final int colorValue;
+  final double tierSort;
+  final bool isInbox;
+  final DateTime? createdAt;
+
+  const _JsonImportTier({
+    required this.id,
+    required this.name,
+    required this.emoji,
+    required this.colorValue,
+    required this.tierSort,
+    required this.isInbox,
+    required this.createdAt,
+  });
+}
+
+class _JsonImportSubject {
+  final int subjectId;
+  final String nameCn;
+  final String nameJp;
+  final String posterUrl;
+  final String largePosterUrl;
+  final String airDate;
+  final int eps;
+  final double rating;
+  final String summary;
+  final String tags;
+  final String director;
+  final String studio;
+  final int globalRank;
+  final DateTime? lastFetchedAt;
+
+  const _JsonImportSubject({
+    required this.subjectId,
+    required this.nameCn,
+    required this.nameJp,
+    required this.posterUrl,
+    required this.largePosterUrl,
+    required this.airDate,
+    required this.eps,
+    required this.rating,
+    required this.summary,
+    required this.tags,
+    required this.director,
+    required this.studio,
+    required this.globalRank,
+    required this.lastFetchedAt,
+  });
+}
+
+class _JsonImportEntry {
+  final int id;
+  final int tierId;
+  final int primarySubjectId;
+  final double entryRank;
+  final String note;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+
+  const _JsonImportEntry({
+    required this.id,
+    required this.tierId,
+    required this.primarySubjectId,
+    required this.entryRank,
+    required this.note,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+}
+
+class _JsonImportEntrySubject {
+  final int entryId;
+  final int subjectId;
+
+  const _JsonImportEntrySubject({
+    required this.entryId,
+    required this.subjectId,
+  });
 }
 
 class _PlainTextImportLine {

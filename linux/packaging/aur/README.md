@@ -6,7 +6,7 @@ AnimeShelf 的 AUR 包名是 `animeshelf`，类型为源码编译包。
 
 - `animeshelf/PKGBUILD`
 - `animeshelf/animeshelf.desktop`
-- `animeshelf/animeshelf.jpg`
+- `animeshelf/animeshelf.png`
 
 ## 发布到 AUR 的基本流程
 
@@ -18,9 +18,9 @@ AnimeShelf 的 AUR 包名是 `animeshelf`，类型为源码编译包。
 
 ```bash
 git clone ssh://aur@aur.archlinux.org/animeshelf.git animeshelf-aur
-cp PKGBUILD animeshelf.desktop animeshelf.jpg .SRCINFO animeshelf-aur/
+cp PKGBUILD animeshelf.desktop animeshelf.png .SRCINFO animeshelf-aur/
 cd animeshelf-aur
-git add PKGBUILD animeshelf.desktop animeshelf.jpg .SRCINFO
+git add PKGBUILD animeshelf.desktop animeshelf.png .SRCINFO
 git commit -m "update to v0.1.0"
 git push
 ```

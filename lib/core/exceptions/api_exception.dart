@@ -16,16 +16,10 @@ class ApiException implements Exception {
 
 /// Thrown when a network request times out.
 class NetworkTimeoutException extends ApiException {
-  const NetworkTimeoutException({
-    super.message = 'Request timed out',
-    super.originalError,
-  });
+  const NetworkTimeoutException({super.message = '请求超时', super.originalError});
 }
 
 /// Thrown when there is no network connectivity.
 class NoConnectionException extends ApiException {
-  const NoConnectionException({
-    super.message = 'No internet connection',
-    super.originalError,
-  });
+  const NoConnectionException({super.message = '网络不可用', super.originalError});
 }

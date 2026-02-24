@@ -19,6 +19,37 @@ class EntryWithSubject {
   const EntryWithSubject({required this.entry, this.subject});
 }
 
+/// Draft payload for creating a new tier during sheet save.
+class PendingTierDraft {
+  final String name;
+  final String emoji;
+  final int colorValue;
+
+  const PendingTierDraft({
+    required this.name,
+    this.emoji = '',
+    required this.colorValue,
+  });
+}
+
+/// Describes one ordered tier item in the manage-tier sheet.
+///
+/// Items can reference an existing tier id, or represent a pending tier
+/// to create and place in the final order when saving.
+class TierManagementItem {
+  final int? tierId;
+  final PendingTierDraft? pendingTier;
+
+  const TierManagementItem._({this.tierId, this.pendingTier})
+    : assert((tierId == null) != (pendingTier == null));
+
+  const TierManagementItem.existing({required int tierId})
+    : this._(tierId: tierId);
+
+  const TierManagementItem.pending({required PendingTierDraft pendingTier})
+    : this._(pendingTier: pendingTier);
+}
+
 /// Repository for shelf operations — CRUD on tiers, entries, and ranking.
 class ShelfRepository {
   final AppDatabase _db;
@@ -139,7 +170,122 @@ class ShelfRepository {
     }
   }
 
-  /// Re-compresses all entry ranks within a tier to evenly-spaced values.
+  /// Sets tier order using the provided ordered list of tier IDs.
+  Future<void> setTierOrder(List<int> orderedTierIds) async {
+    if (orderedTierIds.isEmpty) {
+      return;
+    }
+    try {
+      await _db.transaction(() async {
+        final allTiers = await _db.select(_db.tiers).get();
+        final existingIds = allTiers.map((tier) => tier.id).toSet();
+        final newIds = orderedTierIds.toSet();
+        if (orderedTierIds.length != newIds.length ||
+            existingIds.length != orderedTierIds.length ||
+            !newIds.containsAll(existingIds)) {
+          throw const DatabaseException(
+            message: 'Tier order does not match current tiers',
+          );
+        }
+        final newSorts = RankUtils.recompressRanks(orderedTierIds.length);
+        await _db.batch((batch) {
+          for (var i = 0; i < orderedTierIds.length; i++) {
+            batch.update(
+              _db.tiers,
+              TiersCompanion(tierSort: Value(newSorts[i])),
+              where: (tbl) => tbl.id.equals(orderedTierIds[i]),
+            );
+          }
+        });
+      });
+    } catch (e) {
+      if (e is DatabaseException) rethrow;
+      throw DatabaseException(
+        message: 'Failed to set tier order',
+        originalError: e,
+      );
+    }
+  }
+
+  /// Saves a mixed tier-management payload in a single transaction.
+  ///
+  /// Existing tiers are reordered, pending tiers are created, and final tier
+  /// sorts are recompressed from top to bottom.
+  Future<void> saveTierManagementChanges(
+    List<TierManagementItem> orderedItems,
+  ) async {
+    if (orderedItems.isEmpty) {
+      return;
+    }
+
+    try {
+      await _db.transaction(() async {
+        final allTiers = await _db.select(_db.tiers).get();
+        final existingIds = allTiers.map((tier) => tier.id).toSet();
+
+        final orderedExistingIds = orderedItems
+            .where((item) => item.tierId != null)
+            .map((item) => item.tierId!)
+            .toList(growable: false);
+        final orderedExistingSet = orderedExistingIds.toSet();
+
+        if (orderedExistingIds.length != orderedExistingSet.length ||
+            existingIds.length != orderedExistingIds.length ||
+            !orderedExistingSet.containsAll(existingIds)) {
+          throw const DatabaseException(
+            message: 'Tier order does not match current tiers',
+          );
+        }
+
+        final finalOrderedTierIds = <int>[];
+        for (final item in orderedItems) {
+          final existingTierId = item.tierId;
+          if (existingTierId != null) {
+            finalOrderedTierIds.add(existingTierId);
+            continue;
+          }
+
+          final pendingTier = item.pendingTier!;
+          final name = pendingTier.name.trim();
+          if (name.isEmpty) {
+            throw const DatabaseException(message: 'Tier name is required');
+          }
+
+          final createdId = await _db
+              .into(_db.tiers)
+              .insert(
+                TiersCompanion.insert(
+                  name: name,
+                  emoji: Value(pendingTier.emoji.trim()),
+                  colorValue: pendingTier.colorValue,
+                  tierSort: 0,
+                ),
+              );
+          finalOrderedTierIds.add(createdId);
+        }
+
+        final newSorts = RankUtils.recompressRanks(finalOrderedTierIds.length);
+        await _db.batch((batch) {
+          for (var i = 0; i < finalOrderedTierIds.length; i++) {
+            batch.update(
+              _db.tiers,
+              TiersCompanion(tierSort: Value(newSorts[i])),
+              where: (tbl) => tbl.id.equals(finalOrderedTierIds[i]),
+            );
+          }
+        });
+      });
+    } catch (e) {
+      if (e is DatabaseException) {
+        rethrow;
+      }
+      throw DatabaseException(
+        message: 'Failed to save tier management changes',
+        originalError: e,
+      );
+    }
+  }
+
   Future<void> recompressEntryRanks(int tierId) async {
     try {
       await _db.transaction(() async {

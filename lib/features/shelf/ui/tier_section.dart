@@ -1,9 +1,11 @@
 import 'package:anime_shelf/core/database/app_database.dart';
 import 'package:anime_shelf/core/theme/app_theme.dart';
 import 'package:anime_shelf/core/utils/rank_utils.dart';
+import 'package:anime_shelf/features/settings/providers/settings_provider.dart';
 import 'package:anime_shelf/features/shelf/data/shelf_repository.dart';
 import 'package:anime_shelf/features/shelf/providers/shelf_provider.dart';
 import 'package:anime_shelf/features/shelf/ui/entry_card.dart';
+import 'package:anime_shelf/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -14,17 +16,17 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 /// across tiers. The header shows tier name, emoji, color, and actions.
 class TierSection extends HookConsumerWidget {
   static const _entrySpacing = 10.0;
+  static const _entryAspectRatio =
+      _EntryCardBox.baseCardWidth / _EntryCardBox.baseCardHeight;
+  static const _androidBaseEntryTitleFontSize = 10.5;
+  static const _androidEntryTitleFontStep = 1.0;
+  static const _desktopBaseEntryTitleFontSize = 10.5;
+  static const _desktopMinEntryTitleFontSize = 8.0;
 
-  final int index;
   final Tier tier;
   final List<EntryWithSubject> entries;
 
-  const TierSection({
-    super.key,
-    required this.index,
-    required this.tier,
-    required this.entries,
-  });
+  const TierSection({super.key, required this.tier, required this.entries});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -34,11 +36,15 @@ class TierSection extends HookConsumerWidget {
     final sectionRadius = metrics?.sectionRadius ?? 16;
     final posterRadius = metrics?.posterRadius ?? 12;
     final cardColor = theme.cardTheme.color;
+    final entryColumns = ref.watch(shelfEntryColumnsProvider);
+    final titleFontSize = _resolveEntryTitleFontSize(entryColumns);
 
     return _buildTierContainer(
       context: context,
       ref: ref,
       entries: entries,
+      entryColumns: entryColumns,
+      titleFontSize: titleFontSize,
       tierColor: tierColor,
       cardColor: cardColor,
       sectionRadius: sectionRadius,
@@ -50,11 +56,15 @@ class TierSection extends HookConsumerWidget {
     required BuildContext context,
     required WidgetRef ref,
     required List<EntryWithSubject> entries,
+    required int entryColumns,
+    required double titleFontSize,
     required Color tierColor,
     required Color? cardColor,
     required double sectionRadius,
     required double posterRadius,
   }) {
+    final l10n = AppLocalizations.of(context)!;
+
     return DragTarget<_EntryDragData>(
       onWillAcceptWithDetails: (details) => true,
       onAcceptWithDetails: (details) {
@@ -100,7 +110,6 @@ class TierSection extends HookConsumerWidget {
                       ),
                     ),
                     child: _TierHeader(
-                      index: index,
                       tier: tier,
                       tierColor: tierColor,
                       onEdit: () => _showEditDialog(context, ref),
@@ -116,7 +125,7 @@ class TierSection extends HookConsumerWidget {
                   ),
                   child: Center(
                     child: Text(
-                      tier.isInbox ? 'Search and add anime to get started' : '',
+                      tier.isInbox ? l10n.searchAndAddToGetStarted : '',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ),
@@ -124,25 +133,36 @@ class TierSection extends HookConsumerWidget {
               else
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: _entrySpacing,
-                      runSpacing: _entrySpacing,
-                      children: entries.asMap().entries.map((e) {
-                        final index = e.key;
-                        final entryData = e.value;
-                        return _buildDraggableEntry(
-                          context,
-                          ref,
-                          entryData,
-                          index,
-                          entries,
-                          posterRadius,
-                        );
-                      }).toList(),
-                    ),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final cardSize = _resolveCardSize(
+                        constraints.maxWidth,
+                        entryColumns,
+                      );
+
+                      return SizedBox(
+                        width: double.infinity,
+                        child: Wrap(
+                          alignment: WrapAlignment.center,
+                          spacing: _entrySpacing,
+                          runSpacing: _entrySpacing,
+                          children: entries.asMap().entries.map((e) {
+                            final index = e.key;
+                            final entryData = e.value;
+                            return _buildDraggableEntry(
+                              context,
+                              ref,
+                              entryData,
+                              index,
+                              entries,
+                              posterRadius,
+                              cardSize,
+                              titleFontSize,
+                            );
+                          }).toList(),
+                        ),
+                      );
+                    },
                   ),
                 ),
             ],
@@ -159,6 +179,8 @@ class TierSection extends HookConsumerWidget {
     int index,
     List<EntryWithSubject> entries,
     double posterRadius,
+    Size cardSize,
+    double titleFontSize,
   ) {
     final dragData = _EntryDragData(
       entryId: entryData.entry.id,
@@ -173,12 +195,22 @@ class TierSection extends HookConsumerWidget {
         borderRadius: BorderRadius.circular(posterRadius),
         child: Opacity(
           opacity: 0.85,
-          child: _EntryCardBox(entryData: entryData, onTap: () {}),
+          child: _EntryCardBox(
+            cardSize: cardSize,
+            entryData: entryData,
+            titleFontSize: titleFontSize,
+            onTap: () {},
+          ),
         ),
       ),
       childWhenDragging: Opacity(
         opacity: 0.3,
-        child: _EntryCardBox(entryData: entryData, onTap: () {}),
+        child: _EntryCardBox(
+          cardSize: cardSize,
+          entryData: entryData,
+          titleFontSize: titleFontSize,
+          onTap: () {},
+        ),
       ),
       child: DragTarget<_EntryDragData>(
         onWillAcceptWithDetails: (details) => true,
@@ -190,12 +222,64 @@ class TierSection extends HookConsumerWidget {
         },
         builder: (context, candidateData, rejectedData) {
           return _EntryCardBox(
+            cardSize: cardSize,
             entryData: entryData,
+            titleFontSize: titleFontSize,
             onTap: () => context.push('/details/${entryData.entry.id}'),
           );
         },
       ),
     );
+  }
+
+  double _resolveEntryTitleFontSize(int entryColumns) {
+    final boundedColumns = entryColumns
+        .clamp(shelfEntryMinColumns, shelfEntryMaxColumns)
+        .toInt();
+
+    if (isDesktopPlatform) {
+      final totalDesktopSteps = shelfEntryMaxColumns - shelfEntryMinColumns;
+      if (totalDesktopSteps <= 0) {
+        return _desktopBaseEntryTitleFontSize;
+      }
+
+      final progress =
+          (boundedColumns - shelfEntryMinColumns) / totalDesktopSteps;
+      final size =
+          _desktopBaseEntryTitleFontSize -
+          ((_desktopBaseEntryTitleFontSize - _desktopMinEntryTitleFontSize) *
+              progress);
+      return size
+          .clamp(_desktopMinEntryTitleFontSize, _desktopBaseEntryTitleFontSize)
+          .toDouble();
+    }
+
+    final extraColumns = boundedColumns - shelfEntryMinColumns;
+    final minFontSize =
+        _androidBaseEntryTitleFontSize -
+        (shelfEntryMaxColumns - shelfEntryMinColumns) *
+            _androidEntryTitleFontStep;
+
+    return (_androidBaseEntryTitleFontSize -
+            extraColumns * _androidEntryTitleFontStep)
+        .clamp(minFontSize, _androidBaseEntryTitleFontSize)
+        .toDouble();
+  }
+
+  Size _resolveCardSize(double maxWidth, int entryColumns) {
+    if (!maxWidth.isFinite || maxWidth <= 0) {
+      return const Size(
+        _EntryCardBox.baseCardWidth,
+        _EntryCardBox.baseCardHeight,
+      );
+    }
+
+    final safeColumns = entryColumns < 1 ? 1 : entryColumns;
+    final spacingWidth = _entrySpacing * (safeColumns - 1);
+    final cardWidth = ((maxWidth - spacingWidth) / safeColumns)
+        .clamp(1.0, double.infinity)
+        .toDouble();
+    return Size(cardWidth, cardWidth / _entryAspectRatio);
   }
 
   void _handleDrop(
@@ -237,6 +321,7 @@ class TierSection extends HookConsumerWidget {
   }
 
   Future<void> _showEditDialog(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context)!;
     final nameController = TextEditingController(text: tier.name);
     final emojiController = TextEditingController(text: tier.emoji);
 
@@ -259,7 +344,7 @@ class TierSection extends HookConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Edit Tier',
+                    l10n.editTier,
                     style: Theme.of(context).textTheme.headlineMedium,
                   ),
                   if (!tier.isInbox)
@@ -272,19 +357,19 @@ class TierSection extends HookConsumerWidget {
                         Navigator.of(context).pop();
                         _confirmDelete(context, ref);
                       },
-                      tooltip: 'Delete Tier',
+                      tooltip: l10n.deleteTier,
                     ),
                 ],
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
+                decoration: InputDecoration(labelText: l10n.name),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: emojiController,
-                decoration: const InputDecoration(labelText: 'Emoji'),
+                decoration: InputDecoration(labelText: l10n.emoji),
               ),
               const SizedBox(height: 24),
               FilledButton(
@@ -298,7 +383,7 @@ class TierSection extends HookConsumerWidget {
                       );
                   Navigator.of(context).pop();
                 },
-                child: const Text('Save'),
+                child: Text(l10n.save),
               ),
             ],
           ),
@@ -311,22 +396,24 @@ class TierSection extends HookConsumerWidget {
   }
 
   void _confirmDelete(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Tier?'),
-        content: Text('Entries in "${tier.name}" will be moved to Inbox.'),
+        title: Text(l10n.deleteTierQuestion),
+        content: Text(l10n.entriesMovedToInbox(tier.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () {
               ref.read(shelfRepositoryProvider).deleteTier(tier.id);
               Navigator.of(context).pop();
             },
-            child: const Text('Delete'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -336,13 +423,11 @@ class TierSection extends HookConsumerWidget {
 
 /// Tier header row with name, emoji, color chip, and action buttons.
 class _TierHeader extends StatelessWidget {
-  final int index;
   final Tier tier;
   final Color tierColor;
   final VoidCallback onEdit;
 
   const _TierHeader({
-    required this.index,
     required this.tier,
     required this.tierColor,
     required this.onEdit,
@@ -355,35 +440,33 @@ class _TierHeader extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: ReorderableDragStartListener(
-              index: index,
-              child: GestureDetector(
-                onDoubleTap: onEdit,
-                behavior: HitTestBehavior.opaque,
-                child: Row(
-                  children: [
-                    Container(
-                      width: 14,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        color: tierColor,
-                        shape: BoxShape.circle,
-                      ),
+            child: GestureDetector(
+              onDoubleTap: onEdit,
+              behavior: HitTestBehavior.opaque,
+              child: Row(
+                children: [
+                  Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: tierColor,
+                      shape: BoxShape.circle,
                     ),
-                    const SizedBox(width: 8),
-                    if (tier.emoji.isNotEmpty) ...[
-                      Text(tier.emoji, style: const TextStyle(fontSize: 18)),
-                      const SizedBox(width: 6),
-                    ],
-                    Expanded(
-                      child: Text(
-                        tier.name,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w600),
-                      ),
-                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  if (tier.emoji.isNotEmpty) ...[
+                    Text(tier.emoji, style: const TextStyle(fontSize: 18)),
+                    const SizedBox(width: 6),
                   ],
-                ),
+                  Expanded(
+                    child: Text(
+                      tier.name,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -394,21 +477,32 @@ class _TierHeader extends StatelessWidget {
 }
 
 class _EntryCardBox extends StatelessWidget {
-  static const cardWidth = 110.0;
-  static const cardHeight = 160.0;
+  static const baseCardWidth = 110.0;
+  static const baseCardHeight = 160.0;
 
-  const _EntryCardBox({required this.entryData, required this.onTap});
+  const _EntryCardBox({
+    required this.cardSize,
+    required this.entryData,
+    required this.titleFontSize,
+    required this.onTap,
+  });
 
+  final Size cardSize;
   final EntryWithSubject entryData;
+  final double titleFontSize;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: cardWidth,
-      height: cardHeight,
+      width: cardSize.width,
+      height: cardSize.height,
       child: RepaintBoundary(
-        child: EntryCard(entryData: entryData, onTap: onTap),
+        child: EntryCard(
+          entryData: entryData,
+          titleFontSize: titleFontSize,
+          onTap: onTap,
+        ),
       ),
     );
   }

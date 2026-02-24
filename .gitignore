@@ -55,3 +55,9 @@ app.*.map.json
 /linux/packaging/aur/animeshelf/src/
 /linux/packaging/aur/animeshelf/*.pkg.tar.zst
 /linux/packaging/aur/animeshelf/*.pkg.tar.zst.sig
+
+# Local act simulation files
+/.github/act/
+
+# Local planning notes
+/docs/TODOLISST.md

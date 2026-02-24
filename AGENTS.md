@@ -62,7 +62,10 @@ Feature-first layout with Repository pattern. See `docs/PROJECT.md` section III.
 
 ```
 lib/
+  main.dart                               # App entry point (ProviderScope + MaterialApp.router)
+  l10n/                                   # App localization resources (.arb) and generated classes
   core/
+    app_name_notifier.dart                # App window name notifier for desktop 
     database/
       app_database.dart       # Drift @DriftDatabase + seed tiers
       app_database.g.dart     # Generated Drift code
@@ -78,6 +81,9 @@ lib/
     utils/
       rank_utils.dart         # insertRank, needsRecompression, recompressRanks
       export_service.dart     # JSON/CSV/MD export + JSON import
+      local_image_service.dart               # Service for resolving offline posters
+      plain_text_import_report_formatter.dart# Text format utilities for importing
+    window/                   # Desktop window controls and layout logic
     router.dart               # GoRouter: /shelf, /search, /details/:entryId, /settings
     providers.dart            # databaseProvider, bangumiClientProvider
     providers.g.dart          # Generated

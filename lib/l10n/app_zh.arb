@@ -1,0 +1,228 @@
+{
+  "@@locale": "zh",
+  "appTitle": "动漫书架",
+  "settings": "设置",
+  "theme": "主题",
+  "window": "窗口",
+  "shelfLayout": "书架布局",
+  "export": "导出",
+  "import": "导入",
+  "dataManagement": "数据管理",
+  "themeBilibiliRed": "哔哩红",
+  "themeDark": "深色",
+  "themePixivBlue": "Pixiv 蓝",
+  "themeMikuTeal": "初音青",
+  "hideSystemTitleBar": "隐藏系统标题栏",
+  "useCustomInAppTitleBarInstead": "改用应用内自定义标题栏",
+  "restartAppForTitleBarChange": "重启应用后该设置将完整生效。",
+  "appDisplayName": "应用显示名称",
+  "exportJsonBackup": "导出 JSON 备份",
+  "fullBackupJson": "完整备份（.json）",
+  "exportCsv": "导出 CSV",
+  "spreadsheetFormat": "电子表格格式",
+  "exportPlainText": "导出纯文本",
+  "copiesToClipboardAndExportsTxt": "复制到剪贴板并导出 .txt",
+  "importJsonBackup": "导入 JSON 备份",
+  "restoreFromJsonFile": "从 .json 文件恢复",
+  "pastePlainTextList": "粘贴纯文本列表",
+  "pasteTextOneAnimePerLine": "粘贴文本，每行一个动画",
+  "plainTextImportConcurrency": "纯文本导入并发数",
+  "entriesPerTierRow": "每行条目数",
+  "currentRange": "当前：{current}（范围 {min}-{max}）",
+  "@currentRange": {
+    "placeholders": {
+      "current": {"type": "int"},
+      "min": {"type": "int"},
+      "max": {"type": "int"}
+    }
+  },
+  "redownloadImages": "重新下载图片",
+  "downloadPostersMissingLocalFiles": "下载本地缺失海报的条目图片",
+  "clearLocalImages": "清除本地图片",
+  "removeCachedPosterFilesFromDevice": "删除设备中的所有缓存海报文件",
+  "clearAllEntries": "清空所有条目",
+  "deletesAllEntriesKeepsTiers": "删除所有条目，保留分组",
+  "copiedToClipboardFileExportCancelled": "已复制到剪贴板（文件导出已取消）",
+  "exportCancelled": "导出已取消",
+  "copiedToClipboardAndExportedToPath": "已复制到剪贴板并导出到 {path}",
+  "@copiedToClipboardAndExportedToPath": {
+    "placeholders": {
+      "path": {"type": "String"}
+    }
+  },
+  "exportedToPathClipboardFailed": "已导出到 {path}（剪贴板复制失败）",
+  "@exportedToPathClipboardFailed": {
+    "placeholders": {
+      "path": {"type": "String"}
+    }
+  },
+  "copiedToClipboardAndExported": "已复制到剪贴板并完成导出",
+  "exportCompleteClipboardFailed": "导出完成（剪贴板复制失败）",
+  "exportedToPath": "已导出到 {path}",
+  "@exportedToPath": {
+    "placeholders": {
+      "path": {"type": "String"}
+    }
+  },
+  "exportComplete": "导出完成",
+  "exportFailed": "导出失败：{error}",
+  "@exportFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "unsupportedExportFormat": "不支持的导出格式：{format}",
+  "@unsupportedExportFormat": {
+    "placeholders": {
+      "format": {"type": "String"}
+    }
+  },
+  "saveExportFile": "保存导出文件",
+  "importBackupQuestion": "导入备份？",
+  "importBackupWarning": "这将替换当前所有数据，确定继续吗？",
+  "importComplete": "导入完成",
+  "importFailed": "导入失败：{error}",
+  "@importFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "inputIsEmpty": "输入内容为空",
+  "plainTextImportAlreadyRunning": "纯文本导入已在进行中",
+  "importStartedInBackground": "已在后台开始导入",
+  "clearAllEntriesQuestion": "清空所有条目？",
+  "clearAllEntriesWarning": "这将永久删除书架中的所有条目。\n\n你的自定义分组不会被删除。\n\n确定继续吗？",
+  "clearAll": "全部清空",
+  "allEntriesCleared": "已清空所有条目",
+  "failedToClearEntries": "清空条目失败：{error}",
+  "@failedToClearEntries": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "plainTextImportReportTitle": "纯文本导入报告",
+  "ok": "确定",
+  "imageDownloadAlreadyRunning": "图片下载任务已在运行",
+  "clearLocalImagesQuestion": "清除本地图片？",
+  "clearLocalImagesWarning": "这将删除所有本地缓存海报图片。网络地址会保留，之后可重新下载。",
+  "clear": "清除",
+  "clearedImagesFreedMb": "已清除图片（释放 {freedMb} MB）",
+  "@clearedImagesFreedMb": {
+    "placeholders": {
+      "freedMb": {"type": "String"}
+    }
+  },
+  "failedToClearImages": "清除图片失败：{error}",
+  "@failedToClearImages": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "name": "名称",
+  "appNameHint": "动漫书架",
+  "save": "保存",
+  "cancel": "取消",
+  "plainTextInputHint": "S\nClannad\n\nA\n欢迎加入NHK",
+  "idle": "空闲",
+  "downloadingImages": "正在下载图片...",
+  "downloadCompleteProgress": "下载完成（{succeeded}/{total}）",
+  "@downloadCompleteProgress": {
+    "placeholders": {
+      "succeeded": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "downloadFailed": "下载失败",
+  "processedSucceeded": "已处理：{processed}/{total}  成功：{succeeded}",
+  "@processedSucceeded": {
+    "placeholders": {
+      "processed": {"type": "int"},
+      "total": {"type": "int"},
+      "succeeded": {"type": "int"}
+    }
+  },
+  "close": "关闭",
+  "failedToLoadShelf": "加载书架失败",
+  "newTier": "新建分组",
+  "tierNameHint": "例如：SSS、SS、S、A...",
+  "emojiOptional": "表情（可选）",
+  "emojiHint": "例如：👑",
+  "addTier": "添加分组",
+  "noTiersYet": "还没有分组，点击 + 创建一个。",
+  "processedImportedSkipped": "已处理：{processed}/{total}  已导入：{imported}  已跳过：{skipped}",
+  "@processedImportedSkipped": {
+    "placeholders": {
+      "processed": {"type": "int"},
+      "total": {"type": "int"},
+      "imported": {"type": "int"},
+      "skipped": {"type": "int"}
+    }
+  },
+  "currentItem": "当前：{item}",
+  "@currentItem": {
+    "placeholders": {
+      "item": {"type": "String"}
+    }
+  },
+  "cancelImport": "取消导入",
+  "viewReport": "查看报告",
+  "importIdle": "导入空闲",
+  "searchingBangumi": "正在搜索 Bangumi...",
+  "importingEntries": "正在导入条目...",
+  "preparingImport": "正在准备导入...",
+  "cancellingImport": "正在取消导入...",
+  "importCancelled": "导入已取消",
+  "importCompleted": "导入完成",
+  "importFailedStatus": "导入失败",
+  "searchBangumiHint": "搜索 Bangumi...",
+  "searchAndAddToGetStarted": "搜索并添加动画即可开始",
+  "editTier": "编辑分组",
+  "deleteTier": "删除分组",
+  "emoji": "表情",
+  "deleteTierQuestion": "删除分组？",
+  "entriesMovedToInbox": "“{tierName}”中的条目将被移动到 Inbox。",
+  "@entriesMovedToInbox": {
+    "placeholders": {
+      "tierName": {"type": "String"}
+    }
+  },
+  "delete": "删除",
+  "searchAnimeHint": "搜索动画...",
+  "searchFailed": "搜索失败：{error}",
+  "@searchFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "retry": "重试",
+  "typeToSearchBangumi": "输入关键词以搜索 Bangumi",
+  "noResultsFound": "没有找到结果",
+  "addToShelf": "添加到书架",
+  "errorWithDetails": "错误：{error}",
+  "@errorWithDetails": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "alreadyOnShelf": "已在你的书架中",
+  "addedToShelf": "已添加到书架",
+  "failedToLoadDetails": "加载详情失败：{error}",
+  "@failedToLoadDetails": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "entryNotFound": "未找到条目",
+  "unknown": "未知",
+  "openInBangumi": "在 Bangumi 打开",
+  "removeFromShelf": "从书架移除",
+  "summary": "简介",
+  "privateNotes": "私人笔记",
+  "writeThoughtsHint": "写下你的想法...",
+  "staff": "制作人员",
+  "director": "导演",
+  "studio": "制作公司",
+  "moveToTier": "移动到分组",
+  "removeFromShelfQuestion": "从书架移除？",
+  "removeFromShelfConfirm": "确定要将这部动画从书架中移除吗？此操作无法撤销。"
+}

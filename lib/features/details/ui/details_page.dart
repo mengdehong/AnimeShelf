@@ -6,6 +6,7 @@ import 'package:anime_shelf/core/window/window_controls.dart';
 import 'package:anime_shelf/core/window/window_settings_notifier.dart';
 import 'package:anime_shelf/features/details/providers/details_provider.dart';
 import 'package:anime_shelf/features/shelf/providers/shelf_provider.dart';
+import 'package:anime_shelf/l10n/app_localizations.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -25,6 +26,7 @@ class DetailsPage extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final detailAsync = ref.watch(entryDetailProvider(entryId));
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       body: detailAsync.when(
@@ -35,13 +37,13 @@ class DetailsPage extends HookConsumerWidget {
             children: [
               const Icon(Icons.error_outline, size: 48),
               const SizedBox(height: 16),
-              Text('Failed to load details: $error'),
+              Text(l10n.failedToLoadDetails(error.toString())),
             ],
           ),
         ),
         data: (detail) {
           if (detail == null) {
-            return const Center(child: Text('Entry not found'));
+            return Center(child: Text(l10n.entryNotFound));
           }
           return _DetailsContent(
             entryId: entryId,
@@ -70,13 +72,14 @@ class _DetailsContent extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final noteController = useTextEditingController(text: entry.note);
     final localLargePath = subject?.localLargeImagePath ?? '';
     final largePosterUrl = subject?.largePosterUrl ?? '';
     final posterUrl = subject?.posterUrl ?? '';
     final title = (subject?.nameCn.isNotEmpty == true)
         ? subject!.nameCn
-        : (subject?.nameJp ?? 'Unknown');
+        : (subject?.nameJp ?? l10n.unknown);
     final originalTitle = subject?.nameJp ?? '';
     final airDate = subject?.airDate ?? '';
     final rating = subject?.rating ?? 0.0;
@@ -118,7 +121,7 @@ class _DetailsContent extends HookConsumerWidget {
                     foregroundColor: Colors.white,
                   ),
                   icon: const Icon(Icons.open_in_new),
-                  tooltip: 'Open in Bangumi',
+                  tooltip: l10n.openInBangumi,
                   onPressed: () => _openBangumi(subjectId),
                 ),
               ),
@@ -130,7 +133,7 @@ class _DetailsContent extends HookConsumerWidget {
                   foregroundColor: Colors.white,
                 ),
                 icon: const Icon(Icons.delete_outline),
-                tooltip: 'Remove from shelf',
+                tooltip: l10n.removeFromShelf,
                 onPressed: () => _confirmDelete(context, ref),
               ),
             ),
@@ -213,7 +216,7 @@ class _DetailsContent extends HookConsumerWidget {
                 if (summary.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   Text(
-                    'Summary',
+                    l10n.summary,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
@@ -223,7 +226,7 @@ class _DetailsContent extends HookConsumerWidget {
                 // Notes
                 const SizedBox(height: 24),
                 Text(
-                  'Private Notes',
+                  l10n.privateNotes,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 8),
@@ -231,9 +234,7 @@ class _DetailsContent extends HookConsumerWidget {
                   controller: noteController,
                   maxLines: null,
                   minLines: 3,
-                  decoration: const InputDecoration(
-                    hintText: 'Write your thoughts...',
-                  ),
+                  decoration: InputDecoration(hintText: l10n.writeThoughtsHint),
                   onChanged: (value) {
                     ref
                         .read(entryDetailProvider(entryId).notifier)
@@ -346,15 +347,17 @@ class _DetailsContent extends HookConsumerWidget {
     String director,
     String studio,
   ) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Staff', style: Theme.of(context).textTheme.titleMedium),
+        Text(l10n.staff, style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         if (director.isNotEmpty)
-          _buildStaffRow(context, Icons.person, 'Director', director),
+          _buildStaffRow(context, Icons.person, l10n.director, director),
         if (studio.isNotEmpty)
-          _buildStaffRow(context, Icons.business, 'Studio', studio),
+          _buildStaffRow(context, Icons.business, l10n.studio, studio),
       ],
     );
   }
@@ -395,23 +398,21 @@ class _DetailsContent extends HookConsumerWidget {
   }
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Remove from shelf?'),
-        content: const Text(
-          'Are you sure you want to remove this anime from your shelf? '
-          'This action cannot be undone.',
-        ),
+        title: Text(l10n.removeFromShelfQuestion),
+        content: Text(l10n.removeFromShelfConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             child: Text(
-              'Delete',
+              l10n.delete,
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ),
@@ -509,6 +510,7 @@ class _TierMoveSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tiersAsync = ref.watch(shelfTiersProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
@@ -517,13 +519,13 @@ class _TierMoveSheet extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Move to Tier',
+            l10n.moveToTier,
             style: Theme.of(context).textTheme.headlineMedium,
           ),
           const SizedBox(height: 16),
           tiersAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Text('Error: $e'),
+            error: (e, _) => Text(l10n.errorWithDetails(e.toString())),
             data: (tiers) => Column(
               children: tiers.map((tierData) {
                 final tier = tierData.tier;

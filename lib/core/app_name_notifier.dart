@@ -5,13 +5,13 @@ part 'app_name_notifier.g.dart';
 
 /// Manages the user-facing display name of the application.
 ///
-/// Persisted via [SharedPreferences].  Defaults to `'AnimeShelf'`.
+/// Persisted via [SharedPreferences].  Defaults to `'动漫书架'`.
 /// The name is shown in the [FusedAppBar] leading area on desktop and
 /// can be edited from the Settings → Window section.
 @Riverpod(keepAlive: true)
 class AppNameNotifier extends _$AppNameNotifier {
   static const _key = 'app_display_name';
-  static const defaultName = 'AnimeShelf';
+  static const defaultName = '动漫书架';
 
   @override
   String build() {
