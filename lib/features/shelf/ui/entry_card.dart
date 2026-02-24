@@ -54,7 +54,7 @@ class EntryCard extends StatelessWidget {
                     left: 8,
                     right: 8,
                     bottom: 6,
-                    top: 24,
+                    top: 54,
                   ),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -62,9 +62,10 @@ class EntryCard extends StatelessWidget {
                       end: Alignment.bottomCenter,
                       colors: [
                         Colors.transparent,
-                        Colors.black.withValues(alpha: 0.8),
+                        Colors.black.withValues(alpha: 0.35),
+                        Colors.black.withValues(alpha: 0.85),
                       ],
-                      stops: const [0.0, 1.0],
+                      stops: const [0.0, 0.45, 1.0],
                     ),
                   ),
                   child: Text(
@@ -72,39 +73,12 @@ class EntryCard extends StatelessWidget {
                     textAlign: TextAlign.center,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      height: 1.1,
-                      letterSpacing: 0.3,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black87,
-                          offset: Offset(-1, -1),
-                          blurRadius: 1,
-                        ),
-                        Shadow(
-                          color: Colors.black87,
-                          offset: Offset(1, -1),
-                          blurRadius: 1,
-                        ),
-                        Shadow(
-                          color: Colors.black87,
-                          offset: Offset(-1, 1),
-                          blurRadius: 1,
-                        ),
-                        Shadow(
-                          color: Colors.black87,
-                          offset: Offset(1, 1),
-                          blurRadius: 1,
-                        ),
-                        Shadow(
-                          color: Colors.black,
-                          offset: Offset(0, 2),
-                          blurRadius: 4,
-                        ),
-                      ],
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.96),
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      height: 1.15,
+                      letterSpacing: 0.2,
                     ),
                   ),
                 ),
