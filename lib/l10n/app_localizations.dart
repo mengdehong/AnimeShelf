@@ -118,6 +118,12 @@ abstract class AppLocalizations {
   /// **'窗口'**
   String get window;
 
+  /// No description provided for @shelfLayout.
+  ///
+  /// In zh, this message translates to:
+  /// **'书架布局'**
+  String get shelfLayout;
+
   /// No description provided for @export.
   ///
   /// In zh, this message translates to:
@@ -249,6 +255,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'纯文本导入并发数'**
   String get plainTextImportConcurrency;
+
+  /// No description provided for @entriesPerTierRow.
+  ///
+  /// In zh, this message translates to:
+  /// **'每行条目数'**
+  String get entriesPerTierRow;
 
   /// No description provided for @currentRange.
   ///

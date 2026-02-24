@@ -13,11 +13,18 @@ import 'package:flutter/material.dart';
 class EntryCard extends StatelessWidget {
   static const _posterCacheWidth = 330;
   static const _posterCacheHeight = 480;
+  static const _defaultTitleFontSize = 11.5;
 
   final EntryWithSubject entryData;
   final VoidCallback onTap;
+  final double titleFontSize;
 
-  const EntryCard({super.key, required this.entryData, required this.onTap});
+  const EntryCard({
+    super.key,
+    required this.entryData,
+    required this.onTap,
+    this.titleFontSize = _defaultTitleFontSize,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -77,7 +84,7 @@ class EntryCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.96),
-                      fontSize: 11.5,
+                      fontSize: titleFontSize,
                       fontWeight: FontWeight.w600,
                       height: 1.15,
                       letterSpacing: 0.2,

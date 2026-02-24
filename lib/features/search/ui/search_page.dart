@@ -20,21 +20,60 @@ class SearchPage extends HookConsumerWidget {
     final controller = useTextEditingController();
     final resultsAsync = ref.watch(searchResultsProvider);
     final l10n = AppLocalizations.of(context)!;
+    final colorScheme = Theme.of(context).colorScheme;
+    final searchBarRadius = BorderRadius.circular(24);
 
     return Scaffold(
       appBar: FusedAppBar(
-        titleSpacing: 0,
-        title: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: l10n.searchAnimeHint,
-            border: InputBorder.none,
-            prefixIcon: const Icon(Icons.search),
+        titleSpacing: 8,
+        title: Padding(
+          padding: const EdgeInsets.only(right: 12),
+          child: SizedBox(
+            height: 38,
+            child: TextField(
+              controller: controller,
+              autofocus: true,
+              textAlignVertical: TextAlignVertical.center,
+              decoration: InputDecoration(
+                hintText: l10n.searchAnimeHint,
+                hintStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurface.withValues(alpha: 0.45),
+                ),
+                isDense: true,
+                filled: true,
+                fillColor: colorScheme.surfaceContainerHighest.withValues(
+                  alpha: 0.5,
+                ),
+                contentPadding: EdgeInsets.zero,
+                prefixIcon: Icon(
+                  Icons.search,
+                  size: 18,
+                  color: colorScheme.onSurface.withValues(alpha: 0.5),
+                ),
+                prefixIconConstraints: const BoxConstraints(
+                  minWidth: 40,
+                  minHeight: 36,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: searchBarRadius,
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: searchBarRadius,
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: searchBarRadius,
+                  borderSide: BorderSide(
+                    color: colorScheme.primary.withValues(alpha: 0.28),
+                  ),
+                ),
+              ),
+              onChanged: (value) {
+                ref.read(searchQueryProvider.notifier).update(value);
+              },
+            ),
           ),
-          onChanged: (value) {
-            ref.read(searchQueryProvider.notifier).update(value);
-          },
         ),
       ),
       body: resultsAsync.when(

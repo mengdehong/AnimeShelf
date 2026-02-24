@@ -1,6 +1,7 @@
 import 'package:anime_shelf/core/database/app_database.dart';
 import 'package:anime_shelf/core/theme/app_theme.dart';
 import 'package:anime_shelf/core/utils/rank_utils.dart';
+import 'package:anime_shelf/features/settings/providers/settings_provider.dart';
 import 'package:anime_shelf/features/shelf/data/shelf_repository.dart';
 import 'package:anime_shelf/features/shelf/providers/shelf_provider.dart';
 import 'package:anime_shelf/features/shelf/ui/entry_card.dart';
@@ -15,6 +16,12 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 /// across tiers. The header shows tier name, emoji, color, and actions.
 class TierSection extends HookConsumerWidget {
   static const _entrySpacing = 10.0;
+  static const _entryAspectRatio =
+      _EntryCardBox.baseCardWidth / _EntryCardBox.baseCardHeight;
+  static const _androidBaseEntryTitleFontSize = 10.5;
+  static const _androidEntryTitleFontStep = 1.0;
+  static const _desktopBaseEntryTitleFontSize = 10.5;
+  static const _desktopMinEntryTitleFontSize = 8.0;
 
   final Tier tier;
   final List<EntryWithSubject> entries;
@@ -29,11 +36,15 @@ class TierSection extends HookConsumerWidget {
     final sectionRadius = metrics?.sectionRadius ?? 16;
     final posterRadius = metrics?.posterRadius ?? 12;
     final cardColor = theme.cardTheme.color;
+    final entryColumns = ref.watch(shelfEntryColumnsProvider);
+    final titleFontSize = _resolveEntryTitleFontSize(entryColumns);
 
     return _buildTierContainer(
       context: context,
       ref: ref,
       entries: entries,
+      entryColumns: entryColumns,
+      titleFontSize: titleFontSize,
       tierColor: tierColor,
       cardColor: cardColor,
       sectionRadius: sectionRadius,
@@ -45,6 +56,8 @@ class TierSection extends HookConsumerWidget {
     required BuildContext context,
     required WidgetRef ref,
     required List<EntryWithSubject> entries,
+    required int entryColumns,
+    required double titleFontSize,
     required Color tierColor,
     required Color? cardColor,
     required double sectionRadius,
@@ -120,25 +133,36 @@ class TierSection extends HookConsumerWidget {
               else
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: _entrySpacing,
-                      runSpacing: _entrySpacing,
-                      children: entries.asMap().entries.map((e) {
-                        final index = e.key;
-                        final entryData = e.value;
-                        return _buildDraggableEntry(
-                          context,
-                          ref,
-                          entryData,
-                          index,
-                          entries,
-                          posterRadius,
-                        );
-                      }).toList(),
-                    ),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final cardSize = _resolveCardSize(
+                        constraints.maxWidth,
+                        entryColumns,
+                      );
+
+                      return SizedBox(
+                        width: double.infinity,
+                        child: Wrap(
+                          alignment: WrapAlignment.center,
+                          spacing: _entrySpacing,
+                          runSpacing: _entrySpacing,
+                          children: entries.asMap().entries.map((e) {
+                            final index = e.key;
+                            final entryData = e.value;
+                            return _buildDraggableEntry(
+                              context,
+                              ref,
+                              entryData,
+                              index,
+                              entries,
+                              posterRadius,
+                              cardSize,
+                              titleFontSize,
+                            );
+                          }).toList(),
+                        ),
+                      );
+                    },
                   ),
                 ),
             ],
@@ -155,6 +179,8 @@ class TierSection extends HookConsumerWidget {
     int index,
     List<EntryWithSubject> entries,
     double posterRadius,
+    Size cardSize,
+    double titleFontSize,
   ) {
     final dragData = _EntryDragData(
       entryId: entryData.entry.id,
@@ -169,12 +195,22 @@ class TierSection extends HookConsumerWidget {
         borderRadius: BorderRadius.circular(posterRadius),
         child: Opacity(
           opacity: 0.85,
-          child: _EntryCardBox(entryData: entryData, onTap: () {}),
+          child: _EntryCardBox(
+            cardSize: cardSize,
+            entryData: entryData,
+            titleFontSize: titleFontSize,
+            onTap: () {},
+          ),
         ),
       ),
       childWhenDragging: Opacity(
         opacity: 0.3,
-        child: _EntryCardBox(entryData: entryData, onTap: () {}),
+        child: _EntryCardBox(
+          cardSize: cardSize,
+          entryData: entryData,
+          titleFontSize: titleFontSize,
+          onTap: () {},
+        ),
       ),
       child: DragTarget<_EntryDragData>(
         onWillAcceptWithDetails: (details) => true,
@@ -186,12 +222,64 @@ class TierSection extends HookConsumerWidget {
         },
         builder: (context, candidateData, rejectedData) {
           return _EntryCardBox(
+            cardSize: cardSize,
             entryData: entryData,
+            titleFontSize: titleFontSize,
             onTap: () => context.push('/details/${entryData.entry.id}'),
           );
         },
       ),
     );
+  }
+
+  double _resolveEntryTitleFontSize(int entryColumns) {
+    final boundedColumns = entryColumns
+        .clamp(shelfEntryMinColumns, shelfEntryMaxColumns)
+        .toInt();
+
+    if (isDesktopPlatform) {
+      final totalDesktopSteps = shelfEntryMaxColumns - shelfEntryMinColumns;
+      if (totalDesktopSteps <= 0) {
+        return _desktopBaseEntryTitleFontSize;
+      }
+
+      final progress =
+          (boundedColumns - shelfEntryMinColumns) / totalDesktopSteps;
+      final size =
+          _desktopBaseEntryTitleFontSize -
+          ((_desktopBaseEntryTitleFontSize - _desktopMinEntryTitleFontSize) *
+              progress);
+      return size
+          .clamp(_desktopMinEntryTitleFontSize, _desktopBaseEntryTitleFontSize)
+          .toDouble();
+    }
+
+    final extraColumns = boundedColumns - shelfEntryMinColumns;
+    final minFontSize =
+        _androidBaseEntryTitleFontSize -
+        (shelfEntryMaxColumns - shelfEntryMinColumns) *
+            _androidEntryTitleFontStep;
+
+    return (_androidBaseEntryTitleFontSize -
+            extraColumns * _androidEntryTitleFontStep)
+        .clamp(minFontSize, _androidBaseEntryTitleFontSize)
+        .toDouble();
+  }
+
+  Size _resolveCardSize(double maxWidth, int entryColumns) {
+    if (!maxWidth.isFinite || maxWidth <= 0) {
+      return const Size(
+        _EntryCardBox.baseCardWidth,
+        _EntryCardBox.baseCardHeight,
+      );
+    }
+
+    final safeColumns = entryColumns < 1 ? 1 : entryColumns;
+    final spacingWidth = _entrySpacing * (safeColumns - 1);
+    final cardWidth = ((maxWidth - spacingWidth) / safeColumns)
+        .clamp(1.0, double.infinity)
+        .toDouble();
+    return Size(cardWidth, cardWidth / _entryAspectRatio);
   }
 
   void _handleDrop(
@@ -389,21 +477,32 @@ class _TierHeader extends StatelessWidget {
 }
 
 class _EntryCardBox extends StatelessWidget {
-  static const cardWidth = 110.0;
-  static const cardHeight = 160.0;
+  static const baseCardWidth = 110.0;
+  static const baseCardHeight = 160.0;
 
-  const _EntryCardBox({required this.entryData, required this.onTap});
+  const _EntryCardBox({
+    required this.cardSize,
+    required this.entryData,
+    required this.titleFontSize,
+    required this.onTap,
+  });
 
+  final Size cardSize;
   final EntryWithSubject entryData;
+  final double titleFontSize;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: cardWidth,
-      height: cardHeight,
+      width: cardSize.width,
+      height: cardSize.height,
       child: RepaintBoundary(
-        child: EntryCard(entryData: entryData, onTap: onTap),
+        child: EntryCard(
+          entryData: entryData,
+          titleFontSize: titleFontSize,
+          onTap: onTap,
+        ),
       ),
     );
   }

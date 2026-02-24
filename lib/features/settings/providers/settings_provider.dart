@@ -5,6 +5,7 @@ import 'package:anime_shelf/core/utils/export_service.dart';
 
 import 'package:anime_shelf/features/search/providers/search_provider.dart';
 import 'package:anime_shelf/features/shelf/providers/shelf_provider.dart';
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -24,6 +25,86 @@ ExportService exportService(ExportServiceRef ref) {
 const plainTextImportMinConcurrency = 4;
 const plainTextImportMaxConcurrency = 8;
 const plainTextImportDefaultConcurrency = 6;
+
+const androidShelfEntryMinColumns = 3;
+const androidShelfEntryMaxColumns = 6;
+const androidShelfEntryDefaultColumns = 3;
+
+const desktopShelfEntryMinColumns = 6;
+const desktopShelfEntryMaxColumns = 12;
+const desktopShelfEntryDefaultColumns = 8;
+
+bool get isDesktopPlatform {
+  if (kIsWeb) {
+    return false;
+  }
+
+  final platform = defaultTargetPlatform;
+  return platform == TargetPlatform.linux ||
+      platform == TargetPlatform.macOS ||
+      platform == TargetPlatform.windows;
+}
+
+int get shelfEntryMinColumns {
+  return isDesktopPlatform
+      ? desktopShelfEntryMinColumns
+      : androidShelfEntryMinColumns;
+}
+
+int get shelfEntryMaxColumns {
+  return isDesktopPlatform
+      ? desktopShelfEntryMaxColumns
+      : androidShelfEntryMaxColumns;
+}
+
+int get shelfEntryDefaultColumns {
+  return isDesktopPlatform
+      ? desktopShelfEntryDefaultColumns
+      : androidShelfEntryDefaultColumns;
+}
+
+final shelfEntryColumnsProvider =
+    NotifierProvider<ShelfEntryColumnsNotifier, int>(
+      ShelfEntryColumnsNotifier.new,
+    );
+
+class ShelfEntryColumnsNotifier extends Notifier<int> {
+  static const _key = 'shelf_entry_columns';
+
+  @override
+  int build() {
+    unawaited(_loadSaved());
+    return shelfEntryDefaultColumns;
+  }
+
+  Future<void> _loadSaved() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getInt(_key);
+    if (saved == null) {
+      return;
+    }
+
+    final bounded = _bounded(saved);
+    if (bounded != state) {
+      state = bounded;
+    }
+    if (bounded != saved) {
+      await prefs.setInt(_key, bounded);
+    }
+  }
+
+  Future<void> setColumns(int value) async {
+    final bounded = _bounded(value);
+    state = bounded;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_key, bounded);
+  }
+
+  int _bounded(int value) {
+    return value.clamp(shelfEntryMinColumns, shelfEntryMaxColumns).toInt();
+  }
+}
 
 final plainTextImportConcurrencyProvider =
     NotifierProvider<PlainTextImportConcurrencyNotifier, int>(

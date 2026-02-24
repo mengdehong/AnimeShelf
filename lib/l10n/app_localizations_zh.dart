@@ -21,6 +21,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get window => '窗口';
 
   @override
+  String get shelfLayout => '书架布局';
+
+  @override
   String get export => '导出';
 
   @override
@@ -85,6 +88,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get plainTextImportConcurrency => '纯文本导入并发数';
+
+  @override
+  String get entriesPerTierRow => '每行条目数';
 
   @override
   String currentRange(int current, int min, int max) {

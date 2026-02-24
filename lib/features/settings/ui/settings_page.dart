@@ -29,6 +29,7 @@ class SettingsPage extends HookConsumerWidget {
     final appName = ref.watch(appNameNotifierProvider);
     final importTaskState = ref.watch(plainTextImportTaskProvider);
     final importConcurrency = ref.watch(plainTextImportConcurrencyProvider);
+    final shelfEntryColumns = ref.watch(shelfEntryColumnsProvider);
     final imageTaskState = ref.watch(imageRedownloadTaskProvider);
 
     // Pick whichever bottom sheet is active (import takes priority).
@@ -118,6 +119,49 @@ class SettingsPage extends HookConsumerWidget {
             ),
             const Divider(height: 32),
           ],
+
+          // ── Shelf Layout Section ──
+          Text(
+            l10n.shelfLayout,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          ListTile(
+            leading: const Icon(Icons.view_module_outlined),
+            title: Text(l10n.entriesPerTierRow),
+            subtitle: Text(
+              l10n.currentRange(
+                shelfEntryColumns,
+                shelfEntryMinColumns,
+                shelfEntryMaxColumns,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Text('$shelfEntryMinColumns'),
+                Expanded(
+                  child: Slider(
+                    value: shelfEntryColumns.toDouble(),
+                    min: shelfEntryMinColumns.toDouble(),
+                    max: shelfEntryMaxColumns.toDouble(),
+                    divisions: shelfEntryMaxColumns - shelfEntryMinColumns,
+                    label: '$shelfEntryColumns',
+                    onChanged: (value) {
+                      ref
+                          .read(shelfEntryColumnsProvider.notifier)
+                          .setColumns(value.round());
+                    },
+                  ),
+                ),
+                Text('$shelfEntryMaxColumns'),
+              ],
+            ),
+          ),
+
+          const Divider(height: 32),
 
           // ── Export Section ──
           Text(l10n.export, style: Theme.of(context).textTheme.titleMedium),

@@ -4,6 +4,7 @@
   "settings": "设置",
   "theme": "主题",
   "window": "窗口",
+  "shelfLayout": "书架布局",
   "export": "导出",
   "import": "导入",
   "dataManagement": "数据管理",
@@ -26,6 +27,7 @@
   "pastePlainTextList": "粘贴纯文本列表",
   "pasteTextOneAnimePerLine": "粘贴文本，每行一个动画",
   "plainTextImportConcurrency": "纯文本导入并发数",
+  "entriesPerTierRow": "每行条目数",
   "currentRange": "当前：{current}（范围 {min}-{max}）",
   "@currentRange": {
     "placeholders": {
