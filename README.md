@@ -85,7 +85,7 @@ paru -S animeshelf
 - `linux/packaging/aur/animeshelf/PKGBUILD`
 - `linux/packaging/aur/animeshelf/.SRCINFO`
 - `linux/packaging/aur/animeshelf/animeshelf.desktop`
-- `linux/packaging/aur/animeshelf/animeshelf.jpg`
+- `linux/packaging/aur/animeshelf/animeshelf.png`
 
 本地验证打包：
 

@@ -15,9 +15,9 @@ pkgbase = animeshelf
 	options = !strip
 	source = animeshelf::git+https://github.com/mengdehong/AnimeShelf.git#tag=v0.1.0
 	source = animeshelf.desktop
-	source = animeshelf.jpg
+	source = animeshelf.png
 	sha256sums = SKIP
 	sha256sums = 5340512162bb77e4fe7f953bad1f54f2865196d065904115ad7018da652781a7
-	sha256sums = 496c5139a8b80176240cf48f34048d3c9602278762584349d2ac45bfa96e48e7
+	sha256sums = 9b6a6652e50d5593c51baa6266a6c896f3045a9885c9592a01bf49944efecb06
 
 pkgname = animeshelf

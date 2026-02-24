@@ -15,13 +15,13 @@ dependencies:
 
   # State management
   hooks_riverpod: ^2.6.1
-  flutter_hooks: ^0.20.5
+  flutter_hooks: ^0.21.3+1
   riverpod_annotation: ^2.6.1
 
   # Database
-  drift: ^2.22.1
-  drift_flutter: ^0.2.4
-  sqlite3_flutter_libs: ^0.5.28
+  drift: ^2.28.2
+  drift_flutter: ^0.2.7
+  sqlite3_flutter_libs: ^0.5.41
 
   # Networking
   dio: ^5.7.0
@@ -34,16 +34,16 @@ dependencies:
   go_router: ^14.8.1
 
   # Window management (Linux desktop)
-  window_manager: ^0.4.3
+  window_manager: ^0.5.1
 
   # Utils
   path_provider: ^2.1.5
   path: ^1.9.1
   share_plus: ^10.1.4
-  file_picker: ^8.1.7
-  shared_preferences: ^2.3.4
-  uuid: ^4.5.1
-  url_launcher: ^6.3.1
+  file_picker: ^8.3.7
+  shared_preferences: ^2.5.4
+  uuid: ^4.5.3
+  url_launcher: ^6.3.2
 
   # Freezed runtime
   freezed_annotation: ^2.4.4
@@ -53,13 +53,14 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
 
   # Code generation
-  build_runner: ^2.4.14
-  riverpod_generator: ^2.6.3
-  freezed: ^2.5.7
-  json_serializable: ^6.9.4
-  drift_dev: ^2.22.1
+  build_runner: ^2.5.4
+  riverpod_generator: ^2.6.4
+  freezed: ^2.5.8
+  json_serializable: ^6.9.5
+  drift_dev: ^2.28.0
 
   # Testing
   mocktail: ^1.0.4
@@ -67,3 +68,9 @@ dev_dependencies:
 flutter:
   generate: true
   uses-material-design: true
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "AnimeShelf.png"
+  min_sdk_android: 21
